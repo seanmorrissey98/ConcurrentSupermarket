@@ -2,17 +2,18 @@ package main
 
 import (
 	"fmt"
+	"packageService"
 )
 
 func main() {
-	trolley := new(Trolley)
-	trolley.setTrolleyCapacity(1)
-	apple := new(Product)
-	apple.setTime(2)
-	trolley.initalizeProducts()
-	trolley.addProductToTrolley(*apple, 0)
-	for i := 0; i < trolley.getTrolleyCapacity(); i++ {
-		productInTrolley := trolley.getProduct(i)
-		fmt.Println(productInTrolley.getTime())
+	trolley := new(packageService.Trolley)
+	trolley.SetTrolleyCapacity(1)
+	apple := new(packageService.Product)
+	apple.SetTime(2)
+	trolley.InitalizeProducts()
+	trolley.AddProductToTrolley(*apple, 0)
+	for i := 0; i < trolley.GetTrolleyCapacity(); i++ {
+		productInTrolley := trolley.GetProduct(i)
+		fmt.Println(productInTrolley.GetTime())
 	}
 }

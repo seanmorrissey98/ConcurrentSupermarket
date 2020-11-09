@@ -9,35 +9,35 @@ type Trolley struct {
 	products        map[int]Product
 }
 
-func (t *Trolley) setTrolleyCapacity(inVal int) {
+func (t *Trolley) SetTrolleyCapacity(inVal int) {
 	t.trolleyCapacity = inVal
 }
 
-func (t *Trolley) getTrolleyCapacity() int {
+func (t *Trolley) GetTrolleyCapacity() int {
 	return t.trolleyCapacity
 }
 
-func (t *Trolley) setProducts(inVal map[int]Product) {
+func (t *Trolley) SetProducts(inVal map[int]Product) {
 	t.products = inVal
 }
 
-func (t *Trolley) initalizeProducts() {
+func (t *Trolley) InitalizeProducts() {
 	t.products = make(map[int]Product)
 }
 
-func (t *Trolley) getProducts() map[int]Product {
+func (t *Trolley) GetProducts() map[int]Product {
 	return t.products
 }
 
-func (t *Trolley) getProduct(inVal int) Product {
+func (t *Trolley) GetProduct(inVal int) Product {
 	return t.products[inVal]
 }
 
-func (t *Trolley) addProductToTrolley(inVal Product, inVal2 int) {
+func (t *Trolley) AddProductToTrolley(inVal Product, inVal2 int) {
 	t.products[inVal2] = inVal
 }
 
-func (t *Trolley) fillTrolley(timeMult int) {
+func (t *Trolley) FillTrolley(timeMult int) {
 	for i := 0; i < t.trolleyCapacity; i++ {
 		t.products[i] = Product{
 			time: rand.Intn(timeMult),

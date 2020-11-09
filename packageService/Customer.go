@@ -13,42 +13,42 @@ type Customer struct {
 	mutex     sync.Mutex
 }
 
-func (c *Customer) setName(inVal string) {
+func (c *Customer) SetName(inVal string) {
 	c.name = inVal
 }
 
-func (c *Customer) getName() string {
+func (c *Customer) GetName() string {
 	return c.name
 }
 
-func (c *Customer) setTrolley(inVal Trolley) {
+func (c *Customer) SetTrolley(inVal Trolley) {
 	c.trolley = inVal
 }
 
-func (c *Customer) getTrolley() Trolley {
+func (c *Customer) GetTrolley() Trolley {
 	return c.trolley
 }
 
-func (c *Customer) setAge(inVal int) {
+func (c *Customer) SetAge(inVal int) {
 	c.age = inVal
 }
 
-func (c *Customer) getAge() int {
+func (c *Customer) GetAge() int {
 	return c.age
 }
 
-func (c *Customer) setImpatient(inVal bool) {
+func (c *Customer) SetImpatient(inVal bool) {
 	c.impatient = inVal
 }
 
-func (c *Customer) getImpatient() bool {
+func (c *Customer) GetImpatient() bool {
 	return c.impatient
 }
 
-func (c *Customer) setGender(inVal string) {
+func (c *Customer) SetGender(inVal string) {
 	c.gender = inVal
 }
 
-func (c *Customer) getGender() string {
+func (c *Customer) GetGender() string {
 	return c.gender
 }

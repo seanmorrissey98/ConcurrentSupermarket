@@ -4,10 +4,10 @@ type Product struct {
 	time int
 }
 
-func (p *Product) setTime(inVal int) {
+func (p *Product) SetTime(inVal int) {
 	p.time = inVal
 }
 
-func (p *Product) getTime() int {
+func (p *Product) GetTime() int {
 	return p.time
 }
