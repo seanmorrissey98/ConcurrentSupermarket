@@ -8,7 +8,7 @@ import (
 
 type Weather struct {
 	status int
-	forecasts [] string
+	forecasts [4] string
 }
 
 func (w *Weather) InitializeWeather() {
@@ -23,14 +23,14 @@ func (w *Weather) GetWeather() string {
 	return w.forecasts[w.status]
 }
 
-func (w *Weather) changeWeather(forecastIndex int) {
+func (w *Weather) ChangeWeather(forecastIndex int) {
 	w.status = forecastIndex
 }
 
-func (w *Weather) GenerateWeather() int {
+func (w *Weather) GenerateWeather() {
 	rand.Seed(time.Now().UnixNano())
 	weatherRand := rand.Intn(4)
-	return weatherRand
+	w.ChangeWeather(weatherRand)
 }
 
 
