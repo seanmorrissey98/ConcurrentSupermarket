@@ -7,8 +7,6 @@ import (
 
 
 type Weather struct {
-	isSunny bool
-	isRaining bool
 	status int
 	forecasts [] string
 }
