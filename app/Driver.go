@@ -1,14 +1,21 @@
 package main
 
 import (
+	"ConcurrentSupermarket/packageService"
 	"bufio"
 	"fmt"
 	"math/rand"
 	"os"
-	"packageService"
 	"strconv"
 	"time"
 )
+
+func generateCustomer(s *packageService.Supermarket, cr int) {
+	for {
+		time.Sleep(time.Millisecond * time.Duration(rand.Intn(int((1.0/float64(cr))*10000))))
+		s.GenerateCustomer()
+	}
+}
 
 func userInput(inVal string, rangeLower float64, rangeHigher float64, ok bool) string {
 	scanner := bufio.NewScanner(os.Stdin)
@@ -35,21 +42,20 @@ func userInput(inVal string, rangeLower float64, rangeHigher float64, ok bool) s
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-	trolley := new(packageService.Trolley)
-	trolley.SetTrolleyCapacity(1)
-	apple := new(packageService.Product)
-	apple.SetTime(2)
-	trolley.InitalizeProducts()
-	trolley.AddProductToTrolley(*apple, 0)
-	for i := 0; i < trolley.GetTrolleyCapacity(); i++ {
-		productInTrolley := trolley.GetProduct(i)
-		fmt.Println(productInTrolley.GetTime())
-	}
 
 	productsRate, _ := strconv.ParseInt(userInput("Please enter the range of products per trolley. (1-200):", 1, 200, true), 10, 64)
-	customerRate, _ := strconv.ParseInt(userInput("Please enter the rate customers arrive at checkouts. (0-60):", 0, 60, true), 10, 64)
+	customerRate, _ := strconv.Atoi(userInput("Please enter the rate customers arrive at checkouts. (0-60):", 0, 60, true))
 	processSpeed, _ := strconv.ParseFloat(userInput("Please enter the range for product processing speed. (0.5-6):", 0, 60, false), 64)
 	fmt.Println("Products rate:", productsRate)
 	fmt.Println("Customer rate:", customerRate)
 	fmt.Printf("%s %f", "Process Speed:", processSpeed)
+
+	s := packageService.NewSupermarket()
+
+	go generateCustomer(&s, customerRate)
+
+	// Locks program running, must be at the end of main
+	fmt.Println("\n\nPress Enter at any time to terminate simulation...")
+	input := bufio.NewScanner(os.Stdin)
+	input.Scan()
 }

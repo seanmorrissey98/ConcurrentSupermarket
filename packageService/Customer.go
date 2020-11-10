@@ -1,16 +1,45 @@
 package packageService
 
 import (
+	"math/rand"
 	"sync"
+	"time"
 )
 
 type Customer struct {
+	id        int
 	name      string
 	trolley   Trolley
 	age       int
 	impatient bool
 	gender    string
 	mutex     sync.Mutex
+}
+
+func (c *Customer) Shop(finishedShopping chan int) {
+	for {
+		time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000)))
+		p := NewProduct()
+		c.trolley.AddProductToTrolley(p)
+
+		if c.trolley.IsFull() {
+			break
+		}
+
+		if rand.Float64() < 0.15 {
+			break
+		}
+	}
+
+	finishedShopping <- c.id
+}
+
+func (c *Customer) SetId(inVal int) {
+	c.id = inVal
+}
+
+func (c *Customer) GetId() int {
+	return c.id
 }
 
 func (c *Customer) SetName(inVal string) {
@@ -27,6 +56,10 @@ func (c *Customer) SetTrolley(inVal Trolley) {
 
 func (c *Customer) GetTrolley() Trolley {
 	return c.trolley
+}
+
+func (c *Customer) GetNumProducts() int {
+	return len(c.trolley.GetProducts())
 }
 
 func (c *Customer) SetAge(inVal int) {

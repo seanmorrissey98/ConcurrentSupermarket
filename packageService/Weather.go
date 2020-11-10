@@ -5,10 +5,9 @@ import (
 	"time"
 )
 
-
 type Weather struct {
-	status int
-	forecasts [4] string
+	status    int
+	forecasts [4]string
 }
 
 func (w *Weather) InitializeWeather() {
@@ -17,7 +16,6 @@ func (w *Weather) InitializeWeather() {
 	w.forecasts[2] = "SUNNY RAIN"
 	w.forecasts[3] = "CLEAR DAY"
 }
-
 
 func (w *Weather) GetWeather() string {
 	return w.forecasts[w.status]
@@ -32,5 +30,3 @@ func (w *Weather) GenerateWeather() {
 	weatherRand := rand.Intn(4)
 	w.ChangeWeather(weatherRand)
 }
-
-
