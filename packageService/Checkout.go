@@ -68,7 +68,7 @@ func (c *Checkout) ProcessCheckout() {
 
 		// Get the total time taken to process all products
 		totalTime := time.Now().UnixNano() - start
-		fmt.Printf("Customer #%d, Time: %v\n", customer.id, totalTime/int64(time.Second))
+		fmt.Printf("Customer #%d, Time: %v seconds\n", customer.id, totalTime/int64(time.Second))
 	}
 }
 
