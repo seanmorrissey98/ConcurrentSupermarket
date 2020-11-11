@@ -1,5 +1,11 @@
 package packageService
 
+import (
+	"fmt"
+	"math/rand"
+	"time"
+)
+
 type Checkout struct {
 	number             int
 	tenOrLess          bool
@@ -8,124 +14,54 @@ type Checkout struct {
 	inUse              bool
 	lineLength         int
 	isLineFull         bool
-	peopleInLine       []*Customer
+	peopleInLine       chan *Customer
 	averageWaitTime    float32
 	processedProducts  int
 	processedCustomers int
 	speed              int
 	isOpen             bool
+	finishedProcessing chan int
 }
 
-func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine []*Customer, averageWaitTime float32, processedProducts int, processedCustomers int, speed int, isOpen bool) *Checkout {
-	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen}
+func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int, processedCustomers int, speed int, isOpen bool, finishedProcessing chan int) *Checkout {
+	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing}
+
+	go c.ProcessCheckout()
 
 	return &c
-}
-
-func (c *Checkout) SetNumber(inVal int) {
-	c.number = inVal
-}
-
-func (c *Checkout) GetNumber() int {
-	return c.number
-}
-
-func (c *Checkout) SetTenOLess(inVal bool) {
-	c.tenOrLess = inVal
-}
-
-func (c *Checkout) GetTenOLess() bool {
-	return c.tenOrLess
-}
-func (c *Checkout) SetIsSelfCheckout(inVal bool) {
-	c.isSelfCheckout = inVal
-}
-
-func (c *Checkout) GetIsSelfCheckout() bool {
-	return c.isSelfCheckout
-}
-
-func (c *Checkout) SetHasScanner(inVal bool) {
-	c.hasScanner = inVal
-}
-
-func (c *Checkout) GetHasScanner() bool {
-	return c.hasScanner
-}
-
-func (c *Checkout) SetInUse(inVal bool) {
-	c.inUse = inVal
-}
-
-func (c *Checkout) GetInUse() bool {
-	return c.inUse
-}
-
-func (c *Checkout) SetIsLineFull(inVal bool) {
-	c.isLineFull = inVal
-}
-
-func (c *Checkout) GetIsLineFull() bool {
-	return c.isLineFull
-}
-
-func (c *Checkout) SetPeopleInLine(inVal []*Customer) {
-	c.peopleInLine = inVal
-}
-
-func (c *Checkout) GetPeopleInLine() []*Customer {
-	return c.peopleInLine
 }
 
 func (c *Checkout) GetNumPeopleInLine() int {
 	return len(c.peopleInLine)
 }
 
-func (c *Checkout) GetAverageWaitTime() float32 {
-	return c.averageWaitTime
-}
-
-func (c *Checkout) SetAverageWaitTime(inVal float32) {
-	c.averageWaitTime = inVal
-}
-
-func (c *Checkout) GetProcessedProducts() int {
-	return c.processedProducts
-}
-func (c *Checkout) SetProcessedProducts(inVal int) {
-	c.processedProducts = inVal
-}
-func (c *Checkout) GetLineLenght() int {
-	return c.lineLength
-}
-func (c *Checkout) SetLineLength(inVal int) {
-	c.lineLength = inVal
-}
-
-func (c *Checkout) GetProcessedCustomers() int {
-	return c.processedCustomers
-}
-func (c *Checkout) SetProcessedCustomers(inVal int) {
-	c.processedCustomers = inVal
-}
-func (c *Checkout) GetSpeed() int {
-	return c.speed
-}
-func (c *Checkout) SetSpeed(inVal int) {
-	c.speed = inVal
-}
-
-func (c *Checkout) GetIsOpen() bool {
-	return c.isOpen
-}
-
-func (c *Checkout) SetIsOpen(inVal bool) {
-	c.isOpen = inVal
-}
-
 func (c *Checkout) AddPersonToLine(customer *Customer) {
-	c.peopleInLine = append(c.peopleInLine, customer)
+	c.peopleInLine <- customer
 	c.lineLength++
+
+	// If theres only one customer in the checkout line, start checkout
+	//if c.lineLength == 1 {
+	//	go c.ProcessCheckout()
+	//}
+}
+
+func (c *Checkout) ProcessCheckout() {
+	for {
+		customer := <-c.peopleInLine
+
+		trolley := customer.trolley
+		products := trolley.products
+
+		start := time.Now().UnixNano()
+
+		for range products {
+			//product.time
+			time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000)))
+		}
+
+		totalTime := time.Now().UnixNano() - start
+		fmt.Printf("Customer #%d, Time: %v\n", customer.id, totalTime/int64(time.Second))
+	}
 }
 
 /*func (c *Checkout) RemovePersonToLine(customer *Customer) {
@@ -134,18 +70,9 @@ func (c *Checkout) AddPersonToLine(customer *Customer) {
 }*/
 
 func Open(c *Checkout) {
-	c.SetIsOpen(true)
+	c.isOpen = true
 }
 
 func Close(c *Checkout) {
-	c.SetIsOpen(false)
+	c.isOpen = false
 }
-
-/*func (c *Checkout) ProcessCustomer(customer *Customer) {
-	var timeProcessed = 0
-	trolley := customer.GetTrolley()
-	products := trolley.GetProducts()
-	for _, element := range products {
-		timeProcessed = timeProcessed + element.GetTime()
-	}
-}*/
