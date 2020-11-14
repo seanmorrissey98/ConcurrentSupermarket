@@ -2,13 +2,17 @@ package packageService
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"time"
 )
 
+// Constant variables for calculating the number checkouts open
+const CustomersPerCheckoutThreshold = 10.0
+
 type Supermarket struct {
 	checkoutOpen        []*Checkout
-	checkoutClosed      map[int]*Checkout
+	checkoutClosed      []*Checkout
 	customers           map[int]*Customer
 	trolleys            []*Trolley
 	numOfTotalCustomers int
@@ -18,7 +22,7 @@ type Supermarket struct {
 
 // Constructor for Supermarket
 func NewSupermarket() Supermarket {
-	s := Supermarket{make([]*Checkout, 8, 256), make(map[int]*Checkout), make(map[int]*Customer), make([]*Trolley, 200), 0, make(chan int), make(chan int)}
+	s := Supermarket{make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, 200), 0, make(chan int), make(chan int)}
 	s.GenerateTrolleys()
 	s.GenerateCheckouts()
 	go s.FinishedShoppingListener()
@@ -54,6 +58,9 @@ func (s *Supermarket) GenerateCustomer() {
 
 	// Customer can now go add products to the trolley
 	go c.Shop(s.finishedShopping)
+
+	// Decides to open or close checkouts
+	s.CalculateOpenCheckout()
 }
 
 // Sends customer to a checkout
@@ -61,14 +68,14 @@ func (s *Supermarket) SendToCheckout(id int) {
 	c := s.customers[id]
 
 	// Choose the best checkout for a customer to go to
-	checkout := s.ChooseCheckout()
+	checkout, _ := s.ChooseCheckout()
 	checkout.AddPersonToLine(c)
 
 	fmt.Printf("Customer #%d is going to checkout #%d with %d items\n", id, checkout.number, s.customers[id].GetNumProducts())
 }
 
 // Gets the best open checkout for a customer to go to at the current time
-func (s *Supermarket) ChooseCheckout() *Checkout {
+func (s *Supermarket) ChooseCheckout() (*Checkout, int) {
 	min, pos := -1, -1
 	for i := 0; i < len(s.checkoutOpen); i++ {
 		if num := s.checkoutOpen[i].GetNumPeopleInLine(); num < min || min < 0 {
@@ -76,7 +83,7 @@ func (s *Supermarket) ChooseCheckout() *Checkout {
 		}
 	}
 
-	return s.checkoutOpen[pos]
+	return s.checkoutOpen[pos], pos
 }
 
 // Generates 200 trolleys in the supermarket
@@ -96,7 +103,11 @@ func (s *Supermarket) GenerateCheckouts() {
 
 	// Default create 8 Checkouts when Supermarket is created
 	for i := 0; i < 8; i++ {
-		s.checkoutOpen[i] = NewCheckout(i+1, tenOrLess, false, true, true, 10, false, make(chan *Customer, 8), 0, 0, 0, 0, true, s.finishedCheckout)
+		if i == 0 {
+			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, tenOrLess, false, true, false, 10, false, make(chan *Customer, 8), 0, 0, 0, 0, true, s.finishedCheckout))
+		} else {
+			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, tenOrLess, false, true, false, 10, false, make(chan *Customer, 8), 0, 0, 0, 0, false, s.finishedCheckout))
+		}
 	}
 }
 
@@ -123,5 +134,53 @@ func (s *Supermarket) FinishedCheckoutListener() {
 		s.trolleys = append(s.trolleys, trolley)
 		// Remove customer from the supermarket
 		delete(s.customers, id)
+	}
+}
+
+// Calculates the threshold for opening / closing a checkout
+func (s *Supermarket) CalculateOpenCheckout() {
+	numOfCurrentCustomers := len(s.customers)
+	numOfOpenCheckouts := len(s.checkoutOpen)
+	calculationOfThreshold := int(math.Ceil(float64(numOfCurrentCustomers) / CustomersPerCheckoutThreshold))
+
+	if numOfCurrentCustomers == 0 {
+		return
+	}
+
+	// Calculate threshold for opening a checkout
+	if calculationOfThreshold > numOfOpenCheckouts {
+		if len(s.checkoutClosed) == 0 {
+			fmt.Printf("All checkouts currently open. The current number of customers is: %d\n", numOfCurrentCustomers)
+			return
+		}
+
+		s.checkoutClosed[0].Open()
+		s.checkoutOpen = append(s.checkoutOpen, s.checkoutClosed[0])
+		s.checkoutClosed = s.checkoutClosed[1:]
+
+		fmt.Printf("1 new chekout opened. We now have %d open checkouts.\n", len(s.checkoutOpen))
+
+		return
+	}
+
+	// Calculate threshold for closing a checkout
+	if calculationOfThreshold < numOfOpenCheckouts {
+		if len(s.checkoutOpen) == 1 {
+			fmt.Printf("We only have one checkout open. Number of customer: %d\n", numOfCurrentCustomers)
+			return
+		}
+
+		checkout, pos := s.ChooseCheckout()
+		checkout.Close()
+		//s.checkoutClosed[len(s.checkoutClosed)] = checkout
+		s.checkoutClosed = append(s.checkoutClosed, checkout)
+
+		//copy(s.checkoutOpen[pos:], s.checkoutOpen[pos+1:])
+		//s.checkoutOpen[len(s.checkoutOpen)-1] = nil
+		s.checkoutOpen = append(s.checkoutOpen[0:pos], s.checkoutOpen[pos+1:]...)
+
+		fmt.Printf("1 chekout just closed. We now have %d open checkouts.\n", len(s.checkoutOpen))
+
+		return
 	}
 }
