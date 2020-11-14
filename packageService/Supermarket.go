@@ -143,17 +143,20 @@ func (s *Supermarket) CalculateOpenCheckout() {
 	numOfOpenCheckouts := len(s.checkoutOpen)
 	calculationOfThreshold := int(math.Ceil(float64(numOfCurrentCustomers) / CustomersPerCheckoutThreshold))
 
+	// Ensure atleast 1 checkout stays open
 	if numOfCurrentCustomers == 0 {
 		return
 	}
 
 	// Calculate threshold for opening a checkout
 	if calculationOfThreshold > numOfOpenCheckouts {
+		// If there are no more checkouts to open
 		if len(s.checkoutClosed) == 0 {
 			fmt.Printf("All checkouts currently open. The current number of customers is: %d\n", numOfCurrentCustomers)
 			return
 		}
 
+		// Open first checkout in closed checkout slice
 		s.checkoutClosed[0].Open()
 		s.checkoutOpen = append(s.checkoutOpen, s.checkoutClosed[0])
 		s.checkoutClosed = s.checkoutClosed[1:]
@@ -170,13 +173,10 @@ func (s *Supermarket) CalculateOpenCheckout() {
 			return
 		}
 
+		// Choose best checkout to close
 		checkout, pos := s.ChooseCheckout()
 		checkout.Close()
-		//s.checkoutClosed[len(s.checkoutClosed)] = checkout
 		s.checkoutClosed = append(s.checkoutClosed, checkout)
-
-		//copy(s.checkoutOpen[pos:], s.checkoutOpen[pos+1:])
-		//s.checkoutOpen[len(s.checkoutOpen)-1] = nil
 		s.checkoutOpen = append(s.checkoutOpen[0:pos], s.checkoutOpen[pos+1:]...)
 
 		fmt.Printf("1 chekout just closed. We now have %d open checkouts.\n", len(s.checkoutOpen))
