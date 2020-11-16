@@ -10,14 +10,6 @@ import (
 	"time"
 )
 
-// Generates infinite amount of customers in the supermarket at the rate provided bu the user
-func generateCustomer(s *packageService.Supermarket, cr int) {
-	for {
-		time.Sleep(time.Millisecond * time.Duration(rand.Intn(int((1.0/float64(cr))*10000))))
-		s.GenerateCustomer()
-	}
-}
-
 func userInput(inVal string, rangeLower float64, rangeHigher float64, ok bool) string {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println(inVal)
@@ -51,10 +43,8 @@ func main() {
 	fmt.Println("Customer rate:", customerRate)
 	fmt.Printf("%s %f", "Process Speed:", processSpeed)
 
-	// Create a Supermarket
-	s := packageService.NewSupermarket()
-	// Start to create customers in the supermarket
-	go generateCustomer(&s, customerRate)
+	m := packageService.NewManager(1, productsRate, customerRate, processSpeed)
+	m.OpenSupermarket()
 
 	// Locks program running, must be at the end of main
 	fmt.Println("\n\nPress Enter at any time to terminate simulation...")

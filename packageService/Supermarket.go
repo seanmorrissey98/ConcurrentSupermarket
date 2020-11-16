@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 )
 
 // Constant variables for calculating the number checkouts open
 const CustomersPerCheckoutThreshold = 10.0
+
+var trolleyMutex *sync.Mutex
 
 type Supermarket struct {
 	checkoutOpen        []*Checkout
@@ -22,9 +25,13 @@ type Supermarket struct {
 
 // Constructor for Supermarket
 func NewSupermarket() Supermarket {
-	s := Supermarket{make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, 200), 0, make(chan int), make(chan int)}
+	trolleyMutex = &sync.Mutex{}
+
+	s := Supermarket{make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, NUM_TROLLEYS), 0, make(chan int), make(chan int)}
 	s.GenerateTrolleys()
 	s.GenerateCheckouts()
+
+	go s.GenerateCustomer()
 	go s.FinishedShoppingListener()
 	go s.FinishedCheckoutListener()
 
@@ -33,34 +40,55 @@ func NewSupermarket() Supermarket {
 
 // Create a customer and adds them to to the customers map in supermarket
 func (s *Supermarket) GenerateCustomer() {
-	// Increment the number of customers in the supermarket
-	s.numOfTotalCustomers++
-	// Create a new customer with an id = the number they are created at in the supermarket
-	c := &Customer{id: s.numOfTotalCustomers}
-	// Add customer to the customers map in supermarket, key=customer.id, value=customer
-	s.customers[c.id] = c
 
-	fmt.Printf("Total num of customers so far: %d\n", s.numOfTotalCustomers)
-
-	// Create 3 different trolley sizes modelling a basket, small trolley and large trolley
-	trolleySizes := []int{10, 100, 200}
-	rand.Seed(time.Now().UnixNano())
-	trolleySize := trolleySizes[rand.Intn(3)]
-
-	// A customer picks a trolley based on the amount of products they need
-	for i, t := range s.trolleys {
-		if t.capacity == trolleySize {
-			c.trolley = t
-			s.trolleys = append(s.trolleys[:i], s.trolleys[i+1:]...)
-			break
+	for {
+		time.Sleep(time.Millisecond * time.Duration(rand.Intn(int((1.0/float64(customerRate))*10000))))
+		if len(s.trolleys) == 0 {
+			continue
 		}
+
+		// Create a new customer with an id = the number they are created at in the supermarket
+		c := &Customer{id: s.numOfTotalCustomers}
+
+		//fmt.Printf("Total num of customers so far: %d\n", s.numOfTotalCustomers)
+
+		// Create 3 different trolley sizes modelling a basket, small trolley and large trolley
+		trolleySize := TROLLEY_SIZES[rand.Intn(len(TROLLEY_SIZES))]
+
+		// A customer picks a trolley based on the amount of products they need
+		outOfTrolleys := false
+		for i, t := range s.trolleys {
+			if t.capacity == trolleySize {
+				c.trolley = t
+
+				trolleyMutex.Lock()
+				s.trolleys[i] = s.trolleys[len(s.trolleys)-1]
+				s.trolleys = s.trolleys[:len(s.trolleys)-1]
+				trolleyMutex.Unlock()
+				break
+			} else if i == len(s.trolleys)-1 {
+				fmt.Println("No More Trolleys of Size: ", trolleySize)
+				outOfTrolleys = true
+			}
+		}
+		if outOfTrolleys {
+			continue
+		}
+
+		fmt.Println(len(s.trolleys))
+
+		// Increment the number of customers in the supermarket
+		s.numOfTotalCustomers++
+
+		// Add customer to the customers map in supermarket, key=customer.id, value=customer
+		s.customers[c.id] = c
+
+		// Customer can now go add products to the trolley
+		go c.Shop(s.finishedShopping)
+
+		// Decides to open or close checkouts
+		s.CalculateOpenCheckout()
 	}
-
-	// Customer can now go add products to the trolley
-	go c.Shop(s.finishedShopping)
-
-	// Decides to open or close checkouts
-	s.CalculateOpenCheckout()
 }
 
 // Sends customer to a checkout
@@ -71,7 +99,7 @@ func (s *Supermarket) SendToCheckout(id int) {
 	checkout, _ := s.ChooseCheckout()
 	checkout.AddPersonToLine(c)
 
-	fmt.Printf("Customer #%d is going to checkout #%d with %d items\n", id, checkout.number, s.customers[id].GetNumProducts())
+	//fmt.Printf("Customer #%d is going to checkout #%d with %d items\n", id, checkout.number, s.customers[id].GetNumProducts())
 }
 
 // Gets the best open checkout for a customer to go to at the current time
@@ -88,11 +116,8 @@ func (s *Supermarket) ChooseCheckout() (*Checkout, int) {
 
 // Generates 200 trolleys in the supermarket
 func (s *Supermarket) GenerateTrolleys() {
-	trolleySizes := []int{10, 100, 200}
-	rand.Seed(time.Now().UnixNano())
-
-	for i := 0; i < 200; i++ {
-		s.trolleys[i] = NewTrolley(trolleySizes[rand.Intn(3)])
+	for i := 0; i < NUM_TROLLEYS; i++ {
+		s.trolleys[i] = NewTrolley(TROLLEY_SIZES[rand.Intn(len(TROLLEY_SIZES))])
 	}
 }
 
@@ -102,11 +127,11 @@ func (s *Supermarket) GenerateCheckouts() {
 	tenOrLess := rand.Float64() < 0.5
 
 	// Default create 8 Checkouts when Supermarket is created
-	for i := 0; i < 8; i++ {
+	for i := 0; i < NUM_CHECKOUTS; i++ {
 		if i == 0 {
-			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, tenOrLess, false, true, false, 10, false, make(chan *Customer, 8), 0, 0, 0, 0, true, s.finishedCheckout))
+			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, tenOrLess, false, true, false, 10, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
 		} else {
-			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, tenOrLess, false, true, false, 10, false, make(chan *Customer, 8), 0, 0, 0, 0, false, s.finishedCheckout))
+			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, tenOrLess, false, true, false, 10, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
 		}
 	}
 }
@@ -121,7 +146,7 @@ func (s *Supermarket) FinishedShoppingListener() {
 	}
 }
 
-// Waits for a customer to finnish at a checkout using a channel, then removes the customer from the supermarket
+// Waits for a customer to finish at a checkout using a channel, then removes the customer from the supermarket
 func (s *Supermarket) FinishedCheckoutListener() {
 	for {
 		// Check if customer is finished at a checkout when all products are processed
@@ -131,7 +156,11 @@ func (s *Supermarket) FinishedCheckoutListener() {
 		trolley.EmptyTrolley()
 
 		// Adds the trolley the customer was using back into the trolleys slice in the supermarket
+		trolleyMutex.Lock()
 		s.trolleys = append(s.trolleys, trolley)
+		trolleyMutex.Unlock()
+
+		//fmt.Println(s.trolleys)
 		// Remove customer from the supermarket
 		delete(s.customers, id)
 	}
@@ -152,7 +181,7 @@ func (s *Supermarket) CalculateOpenCheckout() {
 	if calculationOfThreshold > numOfOpenCheckouts {
 		// If there are no more checkouts to open
 		if len(s.checkoutClosed) == 0 {
-			fmt.Printf("All checkouts currently open. The current number of customers is: %d\n", numOfCurrentCustomers)
+			//fmt.Printf("All checkouts currently open. The current number of customers is: %d\n", numOfCurrentCustomers)
 			return
 		}
 
@@ -161,7 +190,9 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		s.checkoutOpen = append(s.checkoutOpen, s.checkoutClosed[0])
 		s.checkoutClosed = s.checkoutClosed[1:]
 
-		fmt.Printf("1 new chekout opened. We now have %d open checkouts.\n", len(s.checkoutOpen))
+		checkoutChangeStatusChan <- 1
+
+		//fmt.Printf("1 new chekout opened. We now have %d open checkouts.\n", len(s.checkoutOpen))
 
 		return
 	}
@@ -169,7 +200,7 @@ func (s *Supermarket) CalculateOpenCheckout() {
 	// Calculate threshold for closing a checkout
 	if calculationOfThreshold < numOfOpenCheckouts {
 		if len(s.checkoutOpen) == 1 {
-			fmt.Printf("We only have one checkout open. Number of customer: %d\n", numOfCurrentCustomers)
+			//fmt.Printf("We only have one checkout open. Number of customer: %d\n", numOfCurrentCustomers)
 			return
 		}
 
@@ -179,7 +210,9 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		s.checkoutClosed = append(s.checkoutClosed, checkout)
 		s.checkoutOpen = append(s.checkoutOpen[0:pos], s.checkoutOpen[pos+1:]...)
 
-		fmt.Printf("1 chekout just closed. We now have %d open checkouts.\n", len(s.checkoutOpen))
+		checkoutChangeStatusChan <- -1
+
+		//fmt.Printf("1 chekout just closed. We now have %d open checkouts.\n", len(s.checkoutOpen))
 
 		return
 	}

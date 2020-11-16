@@ -1,7 +1,6 @@
 package packageService
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 )
@@ -59,7 +58,7 @@ func (c *Checkout) ProcessCheckout() {
 		trolley := customer.trolley
 		products := trolley.products
 
-		start := time.Now().UnixNano()
+		//start := time.Now().UnixNano()
 
 		for range products {
 			// TODO: product.time
@@ -67,10 +66,11 @@ func (c *Checkout) ProcessCheckout() {
 		}
 
 		// Get the total time taken to process all products
-		totalTime := time.Now().UnixNano() - start
-		fmt.Printf("Customer #%d, Time: %v seconds\n", customer.id, totalTime/int64(time.Second))
+		//totalTime := time.Now().UnixNano() - start
+		//fmt.Printf("Customer #%d, Time: %v seconds\n", customer.id, totalTime/int64(time.Second))
 
 		c.finishedProcessing <- customer.id
+		finishedAtCheckoutChan <- customer.id
 	}
 }
 
