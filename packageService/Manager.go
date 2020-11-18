@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-const NUM_CHECKOUTS = 8
-const MAX_CUSTOMERS_PER_CHECKOUT = 8
-const NUM_TROLLEYS = 200
+const NUM_CHECKOUTS = 50
+const MAX_CUSTOMERS_PER_CHECKOUT = 12
+const NUM_TROLLEYS = 500
 
 var TROLLEY_SIZES = [...]int{10, 100, 200}
 
@@ -16,6 +16,7 @@ var (
 	customerRate int
 	processSpeed float64
 
+	newCustomerChan          chan int
 	customerToCheckoutChan   chan int
 	finishedAtCheckoutChan   chan int
 	checkoutChangeStatusChan chan int
@@ -38,6 +39,7 @@ func NewManager(id int, pr int64, cr int, ps float64) *Manager {
 	customerRate = cr
 	processSpeed = ps
 
+	newCustomerChan = make(chan int, 256)
 	customerToCheckoutChan = make(chan int, 256)
 	finishedAtCheckoutChan = make(chan int, 256)
 	checkoutChangeStatusChan = make(chan int, 256)
@@ -49,6 +51,15 @@ func (m *Manager) NewCustomerStat() {
 	m.numberOfCurrentCustomersShopping++
 	m.totalNumberOfCustomersInStore++
 	m.totalNumberOfCustomersToday++
+}
+
+func (m *Manager) NewCustomerListener() {
+	for {
+		<-newCustomerChan
+		m.numberOfCurrentCustomersShopping++
+		m.totalNumberOfCustomersInStore++
+		m.totalNumberOfCustomersToday++
+	}
 }
 
 func (m *Manager) CustomerToCheckoutListener() {
@@ -63,6 +74,7 @@ func (m *Manager) CustomerFinishedShoppingListener() {
 	for {
 		<-finishedAtCheckoutChan
 		m.numberOfCurrentCustomersAtCheckout--
+		m.totalNumberOfCustomersInStore--
 	}
 }
 
@@ -87,22 +99,23 @@ func generateCustomer(m *Manager, s *Supermarket) {
 func (m *Manager) OpenSupermarket() {
 	// Create a Supermarket
 	NewSupermarket()
-	// Start to create customers in the supermarket
-	//go generateCustomer(m, &s)
 
+	go m.NewCustomerListener()
 	go m.CustomerToCheckoutListener()
 	go m.CustomerFinishedShoppingListener()
 	go m.OpenCloseCheckoutListener()
 
-	//go m.StatPrint()
+	go m.StatPrint()
 }
 
 func (m *Manager) StatPrint() {
 	for {
 		fmt.Printf("Total Customers Today: %d, Total Customers In Store: %d, Total Customers Shopping: %d,"+
-			" Total Customers At Checkout: %d, Checkouts Open: %d, Checkouts Closed: %d\r",
+			" Total Customers At Checkout: %d, Checkouts Open: %d, Checkouts Closed: %d,"+
+			" Available Trolleys: %d\r",
 			m.totalNumberOfCustomersToday, m.totalNumberOfCustomersInStore, m.numberOfCurrentCustomersShopping,
-			m.numberOfCurrentCustomersAtCheckout, m.numberOfCheckoutsOpen, m.numberOfCheckoutsClosed)
+			m.numberOfCurrentCustomersAtCheckout, m.numberOfCheckoutsOpen, m.numberOfCheckoutsClosed,
+			NUM_TROLLEYS-m.totalNumberOfCustomersInStore)
 
 		time.Sleep(time.Millisecond * 40)
 	}

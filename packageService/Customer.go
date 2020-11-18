@@ -21,7 +21,7 @@ func (c *Customer) Shop(readyForCheckoutChan chan int) {
 	//fmt.Printf("Customer #%d trolley size: %d\n", c.id, c.trolley.capacity)
 	// Infinite loop of customer shopping
 	for {
-		//TODO: Add a 1 second sleep, will be replaces with a product wait time
+		// TODO: Add a 1 second sleep, will be replaces with a product wait time
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000)))
 		p := NewProduct()
 		c.trolley.AddProductToTrolley(p)

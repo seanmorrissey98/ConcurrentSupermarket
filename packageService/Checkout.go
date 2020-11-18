@@ -62,7 +62,7 @@ func (c *Checkout) ProcessCheckout() {
 
 		for range products {
 			// TODO: product.time
-			time.Sleep(time.Millisecond * time.Duration(rand.Intn(1000)))
+			time.Sleep(time.Millisecond * time.Duration(rand.Intn(500)))
 		}
 
 		// Get the total time taken to process all products

@@ -1,7 +1,6 @@
 package packageService
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 	"sync"
@@ -12,6 +11,7 @@ import (
 const CustomersPerCheckoutThreshold = 10.0
 
 var trolleyMutex *sync.Mutex
+var customerMutex *sync.RWMutex
 
 type Supermarket struct {
 	checkoutOpen        []*Checkout
@@ -26,6 +26,7 @@ type Supermarket struct {
 // Constructor for Supermarket
 func NewSupermarket() Supermarket {
 	trolleyMutex = &sync.Mutex{}
+	customerMutex = &sync.RWMutex{}
 
 	s := Supermarket{make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, NUM_TROLLEYS), 0, make(chan int), make(chan int)}
 	s.GenerateTrolleys()
@@ -67,7 +68,7 @@ func (s *Supermarket) GenerateCustomer() {
 				trolleyMutex.Unlock()
 				break
 			} else if i == len(s.trolleys)-1 {
-				fmt.Println("No More Trolleys of Size: ", trolleySize)
+				//fmt.Println("No More Trolleys of Size: ", trolleySize)
 				outOfTrolleys = true
 			}
 		}
@@ -75,13 +76,16 @@ func (s *Supermarket) GenerateCustomer() {
 			continue
 		}
 
-		fmt.Println(len(s.trolleys))
+		// Add customer to stat print
+		newCustomerChan <- 1
 
 		// Increment the number of customers in the supermarket
 		s.numOfTotalCustomers++
 
 		// Add customer to the customers map in supermarket, key=customer.id, value=customer
+		customerMutex.Lock()
 		s.customers[c.id] = c
+		customerMutex.Unlock()
 
 		// Customer can now go add products to the trolley
 		go c.Shop(s.finishedShopping)
@@ -93,7 +97,9 @@ func (s *Supermarket) GenerateCustomer() {
 
 // Sends customer to a checkout
 func (s *Supermarket) SendToCheckout(id int) {
+	customerMutex.RLock()
 	c := s.customers[id]
+	customerMutex.RUnlock()
 
 	// Choose the best checkout for a customer to go to
 	checkout, _ := s.ChooseCheckout()
@@ -151,7 +157,9 @@ func (s *Supermarket) FinishedCheckoutListener() {
 	for {
 		// Check if customer is finished at a checkout when all products are processed
 		id := <-s.finishedCheckout
+		customerMutex.RLock()
 		trolley := s.customers[id].trolley
+		customerMutex.RUnlock()
 		// Empty the customers trolley
 		trolley.EmptyTrolley()
 
@@ -162,7 +170,9 @@ func (s *Supermarket) FinishedCheckoutListener() {
 
 		//fmt.Println(s.trolleys)
 		// Remove customer from the supermarket
+		customerMutex.Lock()
 		delete(s.customers, id)
+		customerMutex.Unlock()
 	}
 }
 
