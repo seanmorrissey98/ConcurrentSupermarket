@@ -5,9 +5,9 @@ import (
 	"time"
 )
 
-const NUM_CHECKOUTS = 50
-const MAX_CUSTOMERS_PER_CHECKOUT = 12
-const NUM_TROLLEYS = 500
+const NUM_CHECKOUTS = 8
+const MAX_CUSTOMERS_PER_CHECKOUT = 6
+const NUM_TROLLEYS = 100
 
 var TROLLEY_SIZES = [...]int{10, 100, 200}
 
@@ -30,6 +30,7 @@ type Manager struct {
 	totalNumberOfCustomersToday        int
 	numberOfCheckoutsOpen              int
 	numberOfCheckoutsClosed            int
+	supermarket						   *Supermarket
 	//name string
 }
 
@@ -96,9 +97,15 @@ func generateCustomer(m *Manager, s *Supermarket) {
 
 }
 
+func (m *Manager) GetSupermarket() *Supermarket{
+	return m.supermarket
+}
+
+
+
 func (m *Manager) OpenSupermarket() {
 	// Create a Supermarket
-	NewSupermarket()
+	m.supermarket = NewSupermarket()
 
 	go m.NewCustomerListener()
 	go m.CustomerToCheckoutListener()

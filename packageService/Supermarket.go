@@ -23,8 +23,19 @@ type Supermarket struct {
 	finishedCheckout    chan int
 }
 
+func (s *Supermarket) GetAllCheckouts()[]*Checkout {
+	return append(s.checkoutOpen, s.checkoutClosed...)
+}
+
+
+
+
+
+
+
+
 // Constructor for Supermarket
-func NewSupermarket() Supermarket {
+func NewSupermarket() *Supermarket {
 	trolleyMutex = &sync.Mutex{}
 	customerMutex = &sync.RWMutex{}
 
@@ -36,7 +47,7 @@ func NewSupermarket() Supermarket {
 	go s.FinishedShoppingListener()
 	go s.FinishedCheckoutListener()
 
-	return s
+	return &s
 }
 
 // Create a customer and adds them to to the customers map in supermarket
