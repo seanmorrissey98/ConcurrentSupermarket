@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -43,7 +44,10 @@ func main() {
 	fmt.Println("Customer rate:", customerRate)
 	fmt.Printf("%s %f", "Process Speed:", processSpeed)
 
-	m := packageService.NewManager(1, productsRate, customerRate, processSpeed)
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	m := packageService.NewManager(1, &wg, productsRate, customerRate, processSpeed)
 	m.OpenSupermarket()
 
 	// Locks program running, must be at the end of main
@@ -51,27 +55,25 @@ func main() {
 	input := bufio.NewScanner(os.Stdin)
 	input.Scan()
 
-	//METRICS
+	m.CloseSupermarket()
 
+	wg.Wait()
+
+	// METRICS
 	supermarket := m.GetSupermarket()
 	checkouts := supermarket.GetAllCheckouts()
 	totalProcessedCustomers := getTotalProcessedCustomers(checkouts)
 	for i := range checkouts {
 		checkout := checkouts[i]
-		fmt.Printf("CHECKOUT %d\n",checkout.GetCheckoutNumber())
+		fmt.Printf("CHECKOUT %d\n", checkout.GetCheckoutNumber())
 		figure := float64(checkout.GetTotalCustomersProcessed()) / float64(totalProcessedCustomers) * 100
-		fmt.Printf("UTILIZATION: %f%\n\n", figure)
+		fmt.Printf("UTILIZATION: %f\n\n", figure)
 	}
-
-
-
-
 }
-
 
 func getTotalProcessedCustomers(c []*packageService.Checkout) int {
 	total := 0
-	for i:= range c {
+	for i := range c {
 		total += c[i].GetTotalCustomersProcessed()
 	}
 	return total

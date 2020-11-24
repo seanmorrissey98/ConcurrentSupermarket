@@ -8,39 +8,29 @@ import (
 	"time"
 )
 
-// Constant variables for calculating the number checkouts open
-const CustomersPerCheckoutThreshold = 10.0
-
 var trolleyMutex *sync.Mutex
 var customerMutex *sync.RWMutex
 
 type Supermarket struct {
-	checkoutOpen        []*Checkout
-	checkoutClosed      []*Checkout
-	customers           map[int]*Customer
-	trolleys            []*Trolley
-	numOfTotalCustomers int
-	finishedShopping    chan int
-	finishedCheckout    chan int
+	openStatus       bool
+	checkoutOpen     []*Checkout
+	checkoutClosed   []*Checkout
+	customers        map[int]*Customer
+	trolleys         []*Trolley
+	finishedShopping chan int
+	finishedCheckout chan int
 }
 
-func (s *Supermarket) GetAllCheckouts()[]*Checkout {
+func (s *Supermarket) GetAllCheckouts() []*Checkout {
 	return append(s.checkoutOpen, s.checkoutClosed...)
 }
-
-
-
-
-
-
-
 
 // Constructor for Supermarket
 func NewSupermarket() *Supermarket {
 	trolleyMutex = &sync.Mutex{}
 	customerMutex = &sync.RWMutex{}
 
-	s := Supermarket{make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, NUM_TROLLEYS), 0, make(chan int), make(chan int)}
+	s := Supermarket{true, make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, NUM_TROLLEYS), make(chan int), make(chan int)}
 	s.GenerateTrolleys()
 	s.GenerateCheckouts()
 
@@ -55,13 +45,17 @@ func NewSupermarket() *Supermarket {
 func (s *Supermarket) GenerateCustomer() {
 
 	for {
+		if !s.openStatus {
+			break
+		}
+
 		time.Sleep(time.Millisecond * time.Duration(rand.Intn(int((1.0/float64(customerRate))*10000))))
 		if len(s.trolleys) == 0 {
 			continue
 		}
 
 		// Create a new customer with an id = the number they are created at in the supermarket
-		c := &Customer{id: s.numOfTotalCustomers}
+		c := &Customer{id: totalNumberOfCustomersToday}
 
 		//fmt.Printf("Total num of customers so far: %d\n", s.numOfTotalCustomers)
 
@@ -90,9 +84,6 @@ func (s *Supermarket) GenerateCustomer() {
 
 		// Add customer to stat print
 		newCustomerChan <- 1
-
-		// Increment the number of customers in the supermarket
-		s.numOfTotalCustomers++
 
 		// Add customer to the customers map in supermarket, key=customer.id, value=customer
 		customerMutex.Lock()
@@ -165,8 +156,15 @@ func (s *Supermarket) GenerateCheckouts() {
 // Waits for a customer to finish shopping using a channel, then sends the customer to a checkout
 func (s *Supermarket) FinishedShoppingListener() {
 	for {
+		if !s.openStatus && numberOfCurrentCustomersShopping == 0 {
+			break
+		}
+
 		// Check if customer is finished adding products to trolley using channel from the shop() method in Customer.go
 		id := <-s.finishedShopping
+
+		customerToCheckoutChan <- id
+
 		// Send customer to a checkout
 		s.SendToCheckout(id)
 	}
@@ -175,6 +173,10 @@ func (s *Supermarket) FinishedShoppingListener() {
 // Waits for a customer to finish at a checkout using a channel, then removes the customer from the supermarket
 func (s *Supermarket) FinishedCheckoutListener() {
 	for {
+		if !s.openStatus && totalNumberOfCustomersInStore == 0 {
+			break
+		}
+
 		// Check if customer is finished at a checkout when all products are processed
 		id := <-s.finishedCheckout
 		customerMutex.RLock()
@@ -193,6 +195,10 @@ func (s *Supermarket) FinishedCheckoutListener() {
 		customerMutex.Lock()
 		delete(s.customers, id)
 		customerMutex.Unlock()
+
+		finishedAtCheckoutChan <- id
+
+		s.CalculateOpenCheckout()
 	}
 }
 
@@ -200,10 +206,10 @@ func (s *Supermarket) FinishedCheckoutListener() {
 func (s *Supermarket) CalculateOpenCheckout() {
 	numOfCurrentCustomers := len(s.customers)
 	numOfOpenCheckouts := len(s.checkoutOpen)
-	calculationOfThreshold := int(math.Ceil(float64(numOfCurrentCustomers) / CustomersPerCheckoutThreshold))
+	calculationOfThreshold := int(math.Ceil(float64(numOfCurrentCustomers) / MAX_CUSTOMERS_PER_CHECKOUT))
 
-	// Ensure atleast 1 checkout stays open
-	if numOfCurrentCustomers == 0 {
+	// Ensure at least 1 checkout stays open
+	if numOfCurrentCustomers == 0 && s.openStatus {
 		return
 	}
 
@@ -229,7 +235,7 @@ func (s *Supermarket) CalculateOpenCheckout() {
 
 	// Calculate threshold for closing a checkout
 	if calculationOfThreshold < numOfOpenCheckouts {
-		if len(s.checkoutOpen) == 1 {
+		if len(s.checkoutOpen) == 1 && s.openStatus {
 			//fmt.Printf("We only have one checkout open. Number of customer: %d\n", numOfCurrentCustomers)
 			return
 		}
@@ -242,7 +248,7 @@ func (s *Supermarket) CalculateOpenCheckout() {
 
 		checkoutChangeStatusChan <- -1
 
-		//fmt.Printf("1 chekout just closed. We now have %d open checkouts.\n", len(s.checkoutOpen))
+		//fmt.Printf("1 checkout just closed. We now have %d open checkouts.\n", len(s.checkoutOpen))
 
 		return
 	}
