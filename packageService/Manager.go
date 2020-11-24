@@ -7,7 +7,7 @@ import (
 )
 
 const NUM_CHECKOUTS = 8
-const MAX_CUSTOMERS_PER_CHECKOUT = 2
+const MAX_CUSTOMERS_PER_CHECKOUT = 6
 const NUM_TROLLEYS = 500
 
 var TROLLEY_SIZES = [...]int{10, 100, 200}
