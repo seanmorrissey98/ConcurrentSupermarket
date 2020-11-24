@@ -131,13 +131,19 @@ func (s *Supermarket) GenerateTrolleys() {
 func (s *Supermarket) GenerateCheckouts() {
 	rand.Seed(time.Now().UnixNano())
 	tenOrLess := rand.Float64() < 0.5
-
 	// Default create 8 Checkouts when Supermarket is created
 	for i := 0; i < NUM_CHECKOUTS; i++ {
-		if i == 0 {
-			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, tenOrLess, false, true, false, 10, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
+		scanner := rand.Intn(2)
+		hasScanner := false
+		if scanner == 0 {
+			hasScanner = false
 		} else {
-			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, tenOrLess, false, true, false, 10, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
+			hasScanner = true
+		}
+		if i == 0 {
+			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, tenOrLess, false, hasScanner, false, 10, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
+		} else {
+			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, tenOrLess, false, hasScanner, false, 10, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
 		}
 	}
 }

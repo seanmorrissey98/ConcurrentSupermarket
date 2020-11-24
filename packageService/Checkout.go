@@ -1,7 +1,6 @@
 package packageService
 
 import (
-	"math/rand"
 	"time"
 )
 
@@ -17,16 +16,20 @@ type Checkout struct {
 	averageWaitTime    float32
 	processedProducts  int
 	processedCustomers int
-	speed              int
+	speed              float64
 	isOpen             bool
 	finishedProcessing chan int
 }
 
 // Checkout Constructor
-func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int, processedCustomers int, speed int, isOpen bool, finishedProcessing chan int) *Checkout {
+func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int, processedCustomers int, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
 	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing}
 	// Starts a goroutine for processing all products in a trolley
-
+	if c.hasScanner {
+		c.speed = 0.5
+	} else {
+		c.speed = 1.0
+	}
 	go c.ProcessCheckout()
 
 	return &c
@@ -60,7 +63,7 @@ func (c *Checkout) ProcessCheckout() {
 		//start := time.Now().UnixNano()
 
 		for _, p := range products {
-			time.Sleep(time.Millisecond * time.Duration(rand.Intn(int(p.GetTime()*1000))))
+			time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*1000*c.speed)))
 		}
 		// Get the total time taken to process all products
 		//totalTime := time.Now().UnixNano() - start

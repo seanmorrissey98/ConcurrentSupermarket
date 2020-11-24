@@ -23,7 +23,7 @@ func (c *Customer) Shop(readyForCheckoutChan chan int) {
 	for {
 		// TODO: Add a 1 second sleep, will be replaces with a product wait time
 		p := NewProduct()
-		time.Sleep(time.Millisecond * time.Duration(rand.Intn(int(p.GetTime()*1000))))
+		time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*1000)))
 		c.trolley.AddProductToTrolley(p)
 
 		if c.trolley.IsFull() {
