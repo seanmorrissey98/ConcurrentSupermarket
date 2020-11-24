@@ -7,7 +7,7 @@ type Trolley struct {
 
 // Trolley Constructor
 func NewTrolley(capacity int) *Trolley {
-	t := Trolley{capacity, make([]*Product, 1, capacity)}
+	t := Trolley{capacity, make([]*Product, 0, capacity)}
 	return &t
 }
 
@@ -23,5 +23,5 @@ func (t *Trolley) IsFull() bool {
 
 // Empties trolley by declaring the current slice as a new slice
 func (t *Trolley) EmptyTrolley() {
-	t.products = make([]*Product, 1, t.capacity)
+	t.products = make([]*Product, 0, t.capacity)
 }

@@ -1,17 +1,19 @@
 package packageService
 
-import "time"
+import (
+	"math/rand"
+)
 
 type Product struct {
-	time int64
+	time float64
 }
 
 // Product Constructor
 func NewProduct() *Product {
-	p := Product{time.Now().UnixNano()}
+	p := Product{rand.Float64() * processSpeed}
 	return &p
 }
 
-func (p *Product) GetTime() int64 {
+func (p *Product) GetTime() float64 {
 	return p.time
 }
