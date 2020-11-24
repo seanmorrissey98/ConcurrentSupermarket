@@ -50,4 +50,29 @@ func main() {
 	fmt.Println("\n\nPress Enter at any time to terminate simulation...")
 	input := bufio.NewScanner(os.Stdin)
 	input.Scan()
+
+	//METRICS
+
+	supermarket := m.GetSupermarket()
+	checkouts := supermarket.GetAllCheckouts()
+	totalProcessedCustomers := getTotalProcessedCustomers(checkouts)
+	for i := range checkouts {
+		checkout := checkouts[i]
+		fmt.Printf("CHECKOUT %d\n",checkout.GetCheckoutNumber())
+		figure := float64(checkout.GetTotalCustomersProcessed()) / float64(totalProcessedCustomers) * 100
+		fmt.Printf("UTILIZATION: %f%\n\n", figure)
+	}
+
+
+
+
+}
+
+
+func getTotalProcessedCustomers(c []*packageService.Checkout) int {
+	total := 0
+	for i:= range c {
+		total += c[i].GetTotalCustomersProcessed()
+	}
+	return total
 }

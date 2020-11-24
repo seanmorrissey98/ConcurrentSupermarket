@@ -22,7 +22,7 @@ type Checkout struct {
 }
 
 // Checkout Constructor
-func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int, processedCustomers int, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
+func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int, processedCustomers int, speed float64, isOpen bool, finishedProcessing chan int,) *Checkout {
 	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing}
 	// Starts a goroutine for processing all products in a trolley
 	if c.hasScanner {
@@ -55,6 +55,8 @@ func (c *Checkout) AddPersonToLine(customer *Customer) {
 // Processes all products in a customers trolley
 func (c *Checkout) ProcessCheckout() {
 	for {
+		var processDuration time.Duration
+		processDuration = 0
 		// Get the first customer in line
 		customer := <-c.peopleInLine
 		trolley := customer.trolley
@@ -63,6 +65,7 @@ func (c *Checkout) ProcessCheckout() {
 		//start := time.Now().UnixNano()
 
 		for _, p := range products {
+			processDuration += time.Millisecond * time.Duration(int(p.GetTime()*1000*c.speed))
 			time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*1000*c.speed)))
 		}
 		// Get the total time taken to process all products
@@ -70,6 +73,11 @@ func (c *Checkout) ProcessCheckout() {
 		//fmt.Printf("Customer #%d, Time: %v seconds\n", customer.id, totalTime/int64(time.Second))
 		c.finishedProcessing <- customer.id
 		finishedAtCheckoutChan <- customer.id
+		c.processedCustomers++
+
+
+
+
 	}
 }
 
@@ -84,4 +92,12 @@ func (c *Checkout) Open() {
 
 func (c *Checkout) Close() {
 	c.isOpen = false
+}
+
+func (c *Checkout) GetTotalCustomersProcessed() int {
+	return c.processedCustomers
+}
+
+func (c *Checkout) GetCheckoutNumber() int  {
+	return c.number
 }
