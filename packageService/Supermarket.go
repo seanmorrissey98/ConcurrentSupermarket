@@ -1,6 +1,7 @@
 package packageService
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"sync"
@@ -133,13 +134,15 @@ func (s *Supermarket) GenerateCheckouts() {
 	tenOrLess := rand.Float64() < 0.5
 	// Default create 8 Checkouts when Supermarket is created
 	for i := 0; i < NUM_CHECKOUTS; i++ {
-		scanner := rand.Intn(2)
-		hasScanner := false
+		//scanner := rand.Intn(2)
+		hasScanner := rand.Float64() < 0.5
+		/*hasScanner := false
 		if scanner == 0 {
 			hasScanner = false
 		} else {
 			hasScanner = true
-		}
+		}*/
+		fmt.Printf("Bool %t\n", hasScanner)
 		if i == 0 {
 			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, tenOrLess, false, hasScanner, false, 10, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
 		} else {

@@ -1,7 +1,6 @@
 package packageService
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -110,12 +109,12 @@ func (m *Manager) OpenSupermarket() {
 
 func (m *Manager) StatPrint() {
 	for {
-		fmt.Printf("Total Customers Today: %d, Total Customers In Store: %d, Total Customers Shopping: %d,"+
-			" Total Customers At Checkout: %d, Checkouts Open: %d, Checkouts Closed: %d,"+
-			" Available Trolleys: %d\r",
-			m.totalNumberOfCustomersToday, m.totalNumberOfCustomersInStore, m.numberOfCurrentCustomersShopping,
-			m.numberOfCurrentCustomersAtCheckout, m.numberOfCheckoutsOpen, m.numberOfCheckoutsClosed,
-			NUM_TROLLEYS-m.totalNumberOfCustomersInStore)
+		//fmt.Printf("Total Customers Today: %d, Total Customers In Store: %d, Total Customers Shopping: %d,"+
+		//	" Total Customers At Checkout: %d, Checkouts Open: %d, Checkouts Closed: %d,"+
+		//	" Available Trolleys: %d\r",
+		//	m.totalNumberOfCustomersToday, m.totalNumberOfCustomersInStore, m.numberOfCurrentCustomersShopping,
+		//	m.numberOfCurrentCustomersAtCheckout, m.numberOfCheckoutsOpen, m.numberOfCheckoutsClosed,
+		//	NUM_TROLLEYS-m.totalNumberOfCustomersInStore)
 
 		time.Sleep(time.Millisecond * 40)
 	}
