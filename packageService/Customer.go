@@ -7,13 +7,14 @@ import (
 )
 
 type Customer struct {
-	id        int
-	name      string
-	trolley   *Trolley
-	age       int
-	impatient bool
-	gender    string
-	mutex     sync.Mutex
+	id          int
+	name        string
+	trolley     *Trolley
+	age         int
+	impatient   bool
+	gender      string
+	mutex       sync.Mutex
+	processTime time.Duration
 }
 
 // Shop lets the customer get products and add them to their trolley until the reach capacity of trolley or break the random < 0.05

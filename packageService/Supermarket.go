@@ -1,7 +1,6 @@
 package packageService
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 	"sync"
@@ -10,6 +9,7 @@ import (
 
 var trolleyMutex *sync.Mutex
 var customerMutex *sync.RWMutex
+var checkoutMutex *sync.RWMutex
 
 type Supermarket struct {
 	openStatus       bool
@@ -29,6 +29,7 @@ func (s *Supermarket) GetAllCheckouts() []*Checkout {
 func NewSupermarket() *Supermarket {
 	trolleyMutex = &sync.Mutex{}
 	customerMutex = &sync.RWMutex{}
+	checkoutMutex = &sync.RWMutex{}
 
 	s := Supermarket{true, make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, NUM_TROLLEYS), make(chan int), make(chan int)}
 	s.GenerateTrolleys()
@@ -105,9 +106,10 @@ func (s *Supermarket) SendToCheckout(id int) {
 	customerMutex.RUnlock()
 
 	// Choose the best checkout for a customer to go to
+	checkoutMutex.RLock()
 	checkout, _ := s.ChooseCheckout()
 	checkout.AddPersonToLine(c)
-
+	checkoutMutex.RUnlock()
 	//fmt.Printf("Customer #%d is going to checkout #%d with %d items\n", id, checkout.number, s.customers[id].GetNumProducts())
 }
 
@@ -136,19 +138,11 @@ func (s *Supermarket) GenerateCheckouts() {
 	tenOrLess := rand.Float64() < 0.5
 	// Default create 8 Checkouts when Supermarket is created
 	for i := 0; i < NUM_CHECKOUTS; i++ {
-		//scanner := rand.Intn(2)
 		hasScanner := rand.Float64() < 0.5
-		/*hasScanner := false
-		if scanner == 0 {
-			hasScanner = false
-		} else {
-			hasScanner = true
-		}*/
-		fmt.Printf("Bool %t\n", hasScanner)
 		if i == 0 {
-			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, tenOrLess, false, hasScanner, false, 10, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
+			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, tenOrLess, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
 		} else {
-			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, tenOrLess, false, hasScanner, false, 10, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
+			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, tenOrLess, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
 		}
 	}
 }
