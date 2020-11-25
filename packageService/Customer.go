@@ -19,10 +19,11 @@ type Customer struct {
 
 // Shop lets the customer get products and add them to their trolley until the reach capacity of trolley or break the random < 0.05
 func (c *Customer) Shop(readyForCheckoutChan chan int) {
-	//fmt.Printf("Customer #%d trolley size: %d\n", c.id, c.trolley.capacity)
 	// Infinite loop of customer shopping
 	for {
-		// TODO: Add a 1 second sleep, will be replaces with a product wait time
+		if c.GetNumProducts() == int(productsRate) {
+			break
+		}
 		p := NewProduct()
 		time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*200)))
 		c.trolley.AddProductToTrolley(p)

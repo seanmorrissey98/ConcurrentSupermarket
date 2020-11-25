@@ -173,18 +173,19 @@ func (s *Supermarket) FinishedCheckoutListener() {
 
 		// Check if customer is finished at a checkout when all products are processed
 		id := <-s.finishedCheckout
-		customerMutex.RLock()
-		trolley := s.customers[id].trolley
-		customerMutex.RUnlock()
-		// Empty the customers trolley
-		trolley.EmptyTrolley()
+		//customerMutex.RLock()
+		if s.customers[id] != nil {
+			customerMutex.RLock()
+			trolley := s.customers[id].trolley
+			customerMutex.RUnlock()
+			// Empty the customers trolley
+			trolley.EmptyTrolley()
+			// Adds the trolley the customer was using back into the trolleys slice in the supermarket
+			trolleyMutex.Lock()
+			s.trolleys = append(s.trolleys, trolley)
+			trolleyMutex.Unlock()
+		}
 
-		// Adds the trolley the customer was using back into the trolleys slice in the supermarket
-		trolleyMutex.Lock()
-		s.trolleys = append(s.trolleys, trolley)
-		trolleyMutex.Unlock()
-
-		//fmt.Println(s.trolleys)
 		// Remove customer from the supermarket
 		customerMutex.Lock()
 		delete(s.customers, id)
