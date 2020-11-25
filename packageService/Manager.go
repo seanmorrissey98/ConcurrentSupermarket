@@ -28,6 +28,8 @@ var (
 	totalNumberOfCustomersToday        int
 	numberOfCheckoutsOpen              int
 	numberOfCheckoutsClosed            int
+
+	numCustomersLost int
 )
 
 type Manager struct {
@@ -91,11 +93,6 @@ func (m *Manager) CustomerFinishedShoppingListener() {
 	}
 }
 
-// Shuts down all manager channels to avoid leaking
-func (m *Manager) ShutDownChannels() {
-
-}
-
 func (m *Manager) OpenCloseCheckoutListener() {
 	for {
 		checkoutChange := <-checkoutChangeStatusChan
@@ -131,7 +128,7 @@ func (m *Manager) OpenSupermarket() {
 
 func (m *Manager) StatPrint() {
 	for {
-		fmt.Printf("Total Customers Today: %d, Total Customers In Store: %02d, Total Customers Shopping: %02d,"+
+		fmt.Printf("Total Customers Today: %02d, Total Customers In Store: %02d, Total Customers Shopping: %02d,"+
 			" Total Customers At Checkout: %02d, Checkouts Open: %d, Checkouts Closed: %d,"+
 			" Available Trolleys: %03d\r",
 			totalNumberOfCustomersToday, totalNumberOfCustomersInStore, numberOfCurrentCustomersShopping,
