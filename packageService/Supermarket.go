@@ -106,11 +106,16 @@ func (s *Supermarket) SendToCheckout(id int) {
 	customerMutex.RUnlock()
 
 	// Choose the best checkout for a customer to go to
-	checkoutMutex.RLock()
-	checkout, _ := s.ChooseCheckout()
-	checkout.AddPersonToLine(c)
-	checkoutMutex.RUnlock()
-	//fmt.Printf("Customer #%d is going to checkout #%d with %d items\n", id, checkout.number, s.customers[id].GetNumProducts())
+	for {
+		checkoutMutex.RLock()
+		checkout, _ := s.ChooseCheckout()
+		if checkout.tenOrLess && c.GetNumProducts() > 10 {
+			continue
+		}
+		checkout.AddPersonToLine(c)
+		checkoutMutex.RUnlock()
+		break
+	}
 }
 
 // Gets the best open checkout for a customer to go to at the current time
@@ -134,15 +139,13 @@ func (s *Supermarket) GenerateTrolleys() {
 
 // Generates 8 checkouts and opens them all by default
 func (s *Supermarket) GenerateCheckouts() {
-	rand.Seed(time.Now().UnixNano())
-	tenOrLess := rand.Float64() < 0.5
 	// Default create 8 Checkouts when Supermarket is created
 	for i := 0; i < NUM_CHECKOUTS; i++ {
 		hasScanner := rand.Float64() < 0.5
 		if i == 0 {
-			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, tenOrLess, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
+			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
 		} else {
-			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, tenOrLess, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
+			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
 		}
 	}
 }
