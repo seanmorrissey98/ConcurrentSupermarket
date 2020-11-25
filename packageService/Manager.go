@@ -45,7 +45,6 @@ func NewManager(id int, wg *sync.WaitGroup, pr int64, cr float64, ps float64) *M
 	forecast, multiplier := weather.GetWeather()
 	fmt.Printf("\nCURRENT FORECAST: %s\n", forecast)
 
-
 	productsRate = pr
 	customerRate = cr * multiplier
 	processSpeed = ps
@@ -153,6 +152,10 @@ func (m *Manager) StatPrint() {
 	}
 
 	m.wg.Done()
+}
+
+func GetTotalNumberOfCustomersToday() int {
+	return totalNumberOfCustomersToday
 }
 
 func (m *Manager) CloseSupermarket() {
