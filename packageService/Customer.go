@@ -15,6 +15,8 @@ type Customer struct {
 	gender      string
 	mutex       sync.Mutex
 	processTime time.Duration
+	waitTime time.Duration
+	peopleInFront []*Customer
 }
 
 // Shop lets the customer get products and add them to their trolley until the reach capacity of trolley or break the random < 0.05

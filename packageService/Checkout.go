@@ -22,11 +22,13 @@ type Checkout struct {
 	speed              float64
 	isOpen             bool
 	finishedProcessing chan int
+	mutexCheckout      sync.Mutex
 }
 
 // Checkout Constructor
 func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int64, processedCustomers int, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
-	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing}
+	var mut = sync.Mutex{}
+	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing,mut}
 
 	if c.hasScanner {
 		c.speed = 0.5
@@ -53,8 +55,22 @@ func (c *Checkout) GetNumPeopleInLine() int {
 // Adds a customer a specific checkout line
 func (c *Checkout) AddPersonToLine(customer *Customer) {
 	// Use channel instead a list of customers to easily pop and send the customer
+	c.mutexCheckout.Lock()
 	c.peopleInLine <- customer
 	c.lineLength++
+	if c.GetNumPeopleInLine() > 1 {
+		sizeLine:= c.GetNumPeopleInLine()
+		for x:=0; x <sizeLine; x++{
+			cust := <- c.peopleInLine
+			c.lineLength --
+			if customer.id != cust.id{
+			customer.peopleInFront=append(customer.peopleInFront,cust)
+			}
+			c.peopleInLine <- cust
+			c.lineLength ++
+		}
+	}
+	c.mutexCheckout.Unlock()
 }
 
 // Processes all products in a customers trolley
@@ -90,6 +106,12 @@ func (c *Checkout) ProcessCheckout() {
 		}
 		w.Wait()
 		customer.processTime = processDuration
+		var sum time.Duration
+		sum=0
+		for _,x := range customer.peopleInFront{
+			sum=sum+x.processTime
+		}
+		customer.waitTime=sum
 		c.finishedProcessing <- customer.id
 		c.processedCustomers++
 	}
