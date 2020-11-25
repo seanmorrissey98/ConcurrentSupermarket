@@ -44,7 +44,6 @@ func NewSupermarket() *Supermarket {
 
 // Create a customer and adds them to to the customers map in supermarket
 func (s *Supermarket) GenerateCustomer() {
-
 	for {
 		if !s.openStatus {
 			break
@@ -84,7 +83,7 @@ func (s *Supermarket) GenerateCustomer() {
 		}
 
 		// Add customer to stat print
-		newCustomerChan <- 1
+		customerStatusChan <- CUSTOMER_NEW
 
 		// Add customer to the customers map in supermarket, key=customer.id, value=customer
 		customerMutex.Lock()
@@ -106,28 +105,45 @@ func (s *Supermarket) SendToCheckout(id int) {
 	customerMutex.RUnlock()
 
 	// Choose the best checkout for a customer to go to
-	for {
-		checkoutMutex.RLock()
-		checkout, _ := s.ChooseCheckout()
-		if checkout.tenOrLess && c.GetNumProducts() > 10 {
-			continue
-		}
-		checkout.AddPersonToLine(c)
-		checkoutMutex.RUnlock()
-		break
+	checkout, pos := s.ChooseCheckout(c)
+	// No checkout with < max number in queue - The number of lost customers (Customers will leave the store if they need to join a queue more than six deep)
+	if pos < 0 {
+		s.CustomerLeavesStore(id)
+		customerStatusChan <- CUSTOMER_LOST
+		return
 	}
+
+	checkout.AddPersonToLine(c)
+	//fmt.Printf("Customer #%d is going to checkout #%d with %d items\n", id, checkout.number, s.customers[id].GetNumProducts())
+
+	customerStatusChan <- CUSTOMER_CHECKOUT
 }
 
 // Gets the best open checkout for a customer to go to at the current time
-func (s *Supermarket) ChooseCheckout() (*Checkout, int) {
+func (s *Supermarket) ChooseCheckout(c *Customer) (*Checkout, int) {
 	min, pos := -1, -1
+
+	checkoutMutex.RLock()
 	for i := 0; i < len(s.checkoutOpen); i++ {
-		if num := s.checkoutOpen[i].GetNumPeopleInLine(); num < min || min < 0 {
+		checkout := s.checkoutOpen[pos]
+		if checkout.tenOrLess && c.GetNumProducts() > 10 {
+			continue
+		}
+		// Gets the number of people in the checkout
+		// Checks if the customer can join the checkout (less than max number (6) allowed)
+		// Finds the checkout with the least amount of people
+		if num := s.checkoutOpen[i].GetNumPeopleInLine(); (num < min || min < 0) && num < MAX_CUSTOMERS_PER_CHECKOUT {
 			min, pos = num, i
 		}
 	}
+	checkoutMutex.RUnlock()
 
-	return s.checkoutOpen[pos], pos
+	var c *Checkout
+	if pos >= 0 {
+		c = s.checkoutOpen[pos]
+	}
+
+	return c, pos
 }
 
 // Generates 200 trolleys in the supermarket
@@ -160,8 +176,6 @@ func (s *Supermarket) FinishedShoppingListener() {
 		// Check if customer is finished adding products to trolley using channel from the shop() method in Customer.go
 		id := <-s.finishedShopping
 
-		customerToCheckoutChan <- id
-
 		// Send customer to a checkout
 		s.SendToCheckout(id)
 	}
@@ -178,26 +192,31 @@ func (s *Supermarket) FinishedCheckoutListener() {
 		id := <-s.finishedCheckout
 		//customerMutex.RLock()
 		if s.customers[id] != nil {
-			customerMutex.RLock()
-			trolley := s.customers[id].trolley
-			customerMutex.RUnlock()
 			// Empty the customers trolley
-			trolley.EmptyTrolley()
-			// Adds the trolley the customer was using back into the trolleys slice in the supermarket
-			trolleyMutex.Lock()
-			s.trolleys = append(s.trolleys, trolley)
-			trolleyMutex.Unlock()
+			s.CustomerLeavesStore(id)
+
+			customerStatusChan <- CUSTOMER_FINISHED
 		}
-
-		// Remove customer from the supermarket
-		customerMutex.Lock()
-		delete(s.customers, id)
-		customerMutex.Unlock()
-
-		finishedAtCheckoutChan <- id
 
 		s.CalculateOpenCheckout()
 	}
+}
+
+func (s *Supermarket) CustomerLeavesStore(id int) {
+	customerMutex.RLock()
+	trolley := s.customers[id].trolley
+	customerMutex.RUnlock()
+
+	trolley.EmptyTrolley()
+	// Adds the trolley the customer was using back into the trolleys slice in the supermarket
+	trolleyMutex.Lock()
+	s.trolleys = append(s.trolleys, trolley)
+	trolleyMutex.Unlock()
+
+	// Remove customer from the supermarket
+	customerMutex.Lock()
+	delete(s.customers, id)
+	customerMutex.Unlock()
 }
 
 // Calculates the threshold for opening / closing a checkout
