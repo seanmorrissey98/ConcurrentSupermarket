@@ -28,7 +28,7 @@ type Checkout struct {
 // Checkout Constructor
 func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int64, processedCustomers int, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
 	var mut = sync.Mutex{}
-	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing,mut}
+	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing, mut}
 
 	if c.hasScanner {
 		c.speed = 0.5
@@ -55,22 +55,22 @@ func (c *Checkout) GetNumPeopleInLine() int {
 // Adds a customer a specific checkout line
 func (c *Checkout) AddPersonToLine(customer *Customer) {
 	// Use channel instead a list of customers to easily pop and send the customer
-	c.mutexCheckout.Lock()
+	//c.mutexCheckout.Lock()
 	c.peopleInLine <- customer
 	c.lineLength++
-	if c.GetNumPeopleInLine() > 1 {
-		sizeLine:= c.GetNumPeopleInLine()
-		for x:=0; x <sizeLine; x++{
-			cust := <- c.peopleInLine
-			c.lineLength --
-			if customer.id != cust.id{
-			customer.peopleInFront=append(customer.peopleInFront,cust)
+	/*if c.GetNumPeopleInLine() > 1 {
+		sizeLine := c.GetNumPeopleInLine()
+		for x := 0; x < sizeLine; x++ {
+			cust := <-c.peopleInLine
+			c.lineLength--
+			if customer.id != cust.id {
+				customer.peopleInFront = append(customer.peopleInFront, cust)
 			}
 			c.peopleInLine <- cust
-			c.lineLength ++
+			c.lineLength++
 		}
 	}
-	c.mutexCheckout.Unlock()
+	c.mutexCheckout.Unlock()*/
 }
 
 // Processes all products in a customers trolley
@@ -94,24 +94,24 @@ func (c *Checkout) ProcessCheckout() {
 		trolley := customer.trolley
 		products := trolley.products
 
-		var w sync.WaitGroup
+		//var w sync.WaitGroup
 
 		for _, p := range products {
 			processDuration += time.Millisecond * time.Duration(int(p.GetTime()*500*c.speed))
 			time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*500*c.speed)))
 
-			w.Add(1)
-			go c.increment(&w)
+			//w.Add(1)
+			//go c.increment(&w)
 
 		}
-		w.Wait()
+		//w.Wait()
 		customer.processTime = processDuration
-		var sum time.Duration
-		sum=0
-		for _,x := range customer.peopleInFront{
-			sum=sum+x.processTime
+		/*var sum time.Duration
+		sum = 0
+		for _, x := range customer.peopleInFront {
+			sum = sum + x.processTime
 		}
-		customer.waitTime=sum
+		customer.waitTime = sum*/
 		c.finishedProcessing <- customer.id
 		c.processedCustomers++
 	}

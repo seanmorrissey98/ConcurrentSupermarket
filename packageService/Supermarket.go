@@ -1,6 +1,7 @@
 package packageService
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"sync"
@@ -100,6 +101,7 @@ func (s *Supermarket) GenerateCustomer() {
 
 // Sends customer to a checkout
 func (s *Supermarket) SendToCheckout(id int) {
+	fmt.Println("WHATEVER")
 	customerMutex.RLock()
 	c := s.customers[id]
 	customerMutex.RUnlock()
@@ -122,11 +124,12 @@ func (s *Supermarket) SendToCheckout(id int) {
 // Gets the best open checkout for a customer to go to at the current time
 func (s *Supermarket) ChooseCheckout(c *Customer) (*Checkout, int) {
 	min, pos := -1, -1
+	var checkout *Checkout
 
 	checkoutMutex.RLock()
 	for i := 0; i < len(s.checkoutOpen); i++ {
-		checkout := s.checkoutOpen[pos]
-		if checkout.tenOrLess && c.GetNumProducts() > 10 {
+		checkout = s.checkoutOpen[i]
+		if c != nil && checkout.tenOrLess && c.GetNumProducts() > 10 {
 			continue
 		}
 		// Gets the number of people in the checkout
@@ -138,12 +141,7 @@ func (s *Supermarket) ChooseCheckout(c *Customer) (*Checkout, int) {
 	}
 	checkoutMutex.RUnlock()
 
-	var c *Checkout
-	if pos >= 0 {
-		c = s.checkoutOpen[pos]
-	}
-
-	return c, pos
+	return checkout, pos
 }
 
 // Generates 200 trolleys in the supermarket
@@ -258,7 +256,7 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		}
 
 		// Choose best checkout to close
-		checkout, pos := s.ChooseCheckout()
+		checkout, pos := s.ChooseCheckout(nil)
 		checkout.Close()
 		s.checkoutClosed = append(s.checkoutClosed, checkout)
 		s.checkoutOpen = append(s.checkoutOpen[0:pos], s.checkoutOpen[pos+1:]...)
