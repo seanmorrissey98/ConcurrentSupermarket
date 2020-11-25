@@ -47,7 +47,7 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	m := packageService.NewManager(1, &wg, productsRate, customerRate, processSpeed)
+	m := packageService.NewManager(1, &wg, productsRate, float64(customerRate), processSpeed)
 	m.OpenSupermarket()
 
 	// Locks program running, must be at the end of main

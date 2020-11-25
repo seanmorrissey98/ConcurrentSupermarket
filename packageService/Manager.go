@@ -14,7 +14,7 @@ var TROLLEY_SIZES = [...]int{10, 100, 200}
 
 var (
 	productsRate int64
-	customerRate int
+	customerRate float64
 	processSpeed float64
 
 	newCustomerChan          chan int
@@ -38,9 +38,16 @@ type Manager struct {
 }
 
 // Manager Constructor
-func NewManager(id int, wg *sync.WaitGroup, pr int64, cr int, ps float64) *Manager {
+func NewManager(id int, wg *sync.WaitGroup, pr int64, cr float64, ps float64) *Manager {
+	var weather Weather
+	weather.InitializeWeather()
+	weather.GenerateWeather()
+	forecast, multiplier := weather.GetWeather()
+	fmt.Printf("\nCURRENT FORECAST: %s\n", forecast)
+
+
 	productsRate = pr
-	customerRate = cr
+	customerRate = cr * multiplier
 	processSpeed = ps
 
 	newCustomerChan = make(chan int, 256)

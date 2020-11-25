@@ -11,14 +11,16 @@ type Weather struct {
 }
 
 func (w *Weather) InitializeWeather() {
-	w.forecasts[0] = "SUNNY DAYS"
-	w.forecasts[1] = "RAINY DAYS"
-	w.forecasts[2] = "SUNNY RAIN"
-	w.forecasts[3] = "CLEAR DAY"
+	w.forecasts[0] = "SUNNY DAYS" //1.25
+	w.forecasts[1] = "RAINY DAYS" // .75
+	w.forecasts[2] = "CLEAR DAY" // 1
+	w.forecasts[3] = "SNOWY DAY" //.5
 }
 
-func (w *Weather) GetWeather() string {
-	return w.forecasts[w.status]
+func (w *Weather) GetWeather() (string, float64) {
+	//return w.forecasts[w.status]
+	multipliers := [4]float64{1.25,0.75,1,0.5}
+	return w.forecasts[w.status], multipliers[w.status]
 }
 
 func (w *Weather) ChangeWeather(forecastIndex int) {
