@@ -63,14 +63,31 @@ func main() {
 	supermarket := m.GetSupermarket()
 	checkouts := supermarket.GetAllCheckouts()
 	totalProcessedCustomers := getTotalProcessedCustomers(checkouts)
+	totalProcessedProducts := getTotalProcessedProducts(checkouts)
 	fmt.Println()
 	for i := range checkouts {
 		checkout := checkouts[i]
 		fmt.Printf("CHECKOUT %d\n", checkout.GetCheckoutNumber())
 		figure := float64(checkout.GetTotalCustomersProcessed()) / float64(totalProcessedCustomers) * 100
-		fmt.Printf("UTILIZATION: %f%s\n\n", figure, "%")
+		fmt.Printf("UTILIZATION: %f%s\n", figure, "%")
+		productsProcessed := checkout.GetTotalProductsProcessed()
+		fmt.Printf("PRODUCTS: %d\n", productsProcessed)
+		percentProducts := float64(productsProcessed) / float64(totalProcessedProducts) * 100
+		fmt.Printf("PERCENT OF TOTAL PROCESSED PRODUCTS: %f%s\n\n", percentProducts,"%")
+
+
 	}
 }
+
+func getTotalProcessedProducts(c []*packageService.Checkout) int64 {
+	var total int64
+	total = 0
+	for i := range c {
+		total += c[i].GetTotalProductsProcessed()
+	}
+	return total
+}
+
 
 func getTotalProcessedCustomers(c []*packageService.Checkout) int {
 	total := 0

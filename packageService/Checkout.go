@@ -1,6 +1,8 @@
 package packageService
 
 import (
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -14,7 +16,7 @@ type Checkout struct {
 	isLineFull         bool
 	peopleInLine       chan *Customer
 	averageWaitTime    float32
-	processedProducts  int
+	processedProducts  int64
 	processedCustomers int
 	speed              float64
 	isOpen             bool
@@ -22,7 +24,7 @@ type Checkout struct {
 }
 
 // Checkout Constructor
-func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int, processedCustomers int, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
+func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int64, processedCustomers int, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
 	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing}
 
 	if c.hasScanner {
@@ -72,11 +74,19 @@ func (c *Checkout) ProcessCheckout() {
 		trolley := customer.trolley
 		products := trolley.products
 
+
+		var w sync.WaitGroup
+
+
 		for _, p := range products {
 			processDuration += time.Millisecond * time.Duration(int(p.GetTime()*500*c.speed))
 			time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*500*c.speed)))
-		}
 
+			w.Add(1)
+			go c.increment(&w)
+
+		}
+		w.Wait()
 		customer.processTime = processDuration
 		c.finishedProcessing <- customer.id
 		c.processedCustomers++
@@ -87,6 +97,13 @@ func (c *Checkout) ProcessCheckout() {
 	delete(c.peopleInLine, c.lineLength)
 	c.lineLength--
 }*/
+
+
+func (c *Checkout) increment(wg *sync.WaitGroup) {
+	atomic.AddInt64(&c.processedProducts, 1)
+	wg.Done()
+}
+
 
 func (c *Checkout) Open() {
 	c.isOpen = true
@@ -103,4 +120,8 @@ func (c *Checkout) GetTotalCustomersProcessed() int {
 
 func (c *Checkout) GetCheckoutNumber() int {
 	return c.number
+}
+
+func (c *Checkout) GetTotalProductsProcessed() int64 {
+	return c.processedProducts
 }
