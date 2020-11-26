@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-const NUM_CHECKOUTS = 8
-const MAX_CUSTOMERS_PER_CHECKOUT = 6
+const NUM_CHECKOUTS = 1
+const MAX_CUSTOMERS_PER_CHECKOUT = 100
 const NUM_TROLLEYS = 500
 
 var TROLLEY_SIZES = [...]int{10, 100, 200}
@@ -34,6 +34,8 @@ var (
 	totalNumberOfCustomersToday        int
 	numberOfCheckoutsOpen              int
 	numCustomersLost                   int
+	customerProcessTimeTotal           int64
+	customerWaitTimeTotal              int64
 )
 
 type Manager struct {
@@ -140,6 +142,18 @@ func (m *Manager) StatPrint() {
 
 func GetTotalNumberOfCustomersToday() int {
 	return totalNumberOfCustomersToday
+}
+
+func GetCustomerTimesInSeconds() (string, string) {
+	avgWait := float64(customerWaitTimeTotal) / float64(totalNumberOfCustomersToday-numCustomersLost)
+	avgProcess := float64(customerProcessTimeTotal) / float64(totalNumberOfCustomersToday-numCustomersLost)
+
+	avgWait /= float64(time.Second)
+	avgProcess /= float64(time.Second)
+
+	sWait := fmt.Sprintf("%d m %d s", int(avgWait)/60, int(avgWait)%60)
+	sProcess := fmt.Sprintf("%d m %d s", int(avgProcess)/60, int(avgProcess)%60)
+	return sWait, sProcess
 }
 
 func (m *Manager) CloseSupermarket() {

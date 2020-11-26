@@ -73,10 +73,13 @@ func main() {
 		productsProcessed := checkout.GetTotalProductsProcessed()
 		fmt.Printf("PRODUCTS: %d\n", productsProcessed)
 		percentProducts := float64(productsProcessed) / float64(totalProcessedProducts) * 100
-		fmt.Printf("PERCENT OF TOTAL PROCESSED PRODUCTS: %f%s\n\n", percentProducts, "%")
+		fmt.Printf("PERCENT OF TOTAL PROCESSED PRODUCTS: %.2f%s\n\n", percentProducts, "%")
 	}
 	total := packageService.GetTotalNumberOfCustomersToday()
-	fmt.Printf("AVERAGE PRODUCTS PER TROLLEY: %f\n\n", float64(totalProcessedProducts)/float64(total))
+	fmt.Printf("AVERAGE PRODUCTS PER TROLLEY: %.2f\n\n", float64(totalProcessedProducts)/float64(total))
+
+	avgWait, avgProcess := packageService.GetCustomerTimesInSeconds()
+	fmt.Printf("AVERAGE CUSTOMER WAIT TIME: %s, AVERAGE CUSTOMER PROCESS TIME: %s\n", avgWait, avgProcess)
 }
 
 func getTotalProcessedProducts(c []*packageService.Checkout) int64 {

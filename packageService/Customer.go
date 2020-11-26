@@ -14,7 +14,8 @@ type Customer struct {
 	impatient   bool
 	gender      string
 	mutex       sync.Mutex
-	processTime time.Duration
+	processTime int64
+	waitTime    int64
 }
 
 // Shop lets the customer get products and add them to their trolley until the reach capacity of trolley or break the random < 0.05

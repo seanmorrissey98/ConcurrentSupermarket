@@ -53,6 +53,7 @@ func (c *Checkout) GetNumPeopleInLine() int {
 // Adds a customer a specific checkout line
 func (c *Checkout) AddPersonToLine(customer *Customer) {
 	// Use channel instead a list of customers to easily pop and send the customer
+	customer.waitTime = time.Now().UnixNano()
 	c.peopleInLine <- customer
 	c.lineLength++
 }
@@ -64,32 +65,31 @@ func (c *Checkout) ProcessCheckout() {
 			break
 		}
 
-		var processDuration time.Duration
-		processDuration = 0
-
 		// Get the first customer in line
 		customer := <-c.peopleInLine
 		if customer == nil {
 			c.isOpen = false
 			break
-		} else {
-			c.lineLength--
 		}
+		c.lineLength--
+
+		customer.waitTime = time.Now().UnixNano() - customer.waitTime
+
 		trolley := customer.trolley
 		products := trolley.products
 
 		var w sync.WaitGroup
 
+		customer.processTime = time.Now().UnixNano()
 		for _, p := range products {
-			processDuration += time.Millisecond * time.Duration(int(p.GetTime()*500*c.speed))
 			time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*500*c.speed)))
-
 			w.Add(1)
 			go c.increment(&w)
 
 		}
 		w.Wait()
-		customer.processTime = processDuration
+
+		customer.processTime = time.Now().UnixNano() - customer.processTime
 		c.finishedProcessing <- customer.id
 		c.processedCustomers++
 	}

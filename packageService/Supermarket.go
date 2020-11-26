@@ -187,6 +187,13 @@ func (s *Supermarket) FinishedCheckoutListener() {
 
 		// Check if customer is finished at a checkout when all products are processed
 		id := <-s.finishedCheckout
+
+		// Updating total wait and process time to get the average later
+		// Doesn't need mutex, accessed 1 at a time here
+		customer := s.customers[id]
+		customerProcessTimeTotal += customer.processTime
+		customerWaitTimeTotal += customer.waitTime
+
 		// Empty the customers trolley
 		s.CustomerLeavesStore(id)
 
