@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-const NUM_CHECKOUTS = 1
-const MAX_CUSTOMERS_PER_CHECKOUT = 100
+const NUM_CHECKOUTS = 8
+const MAX_CUSTOMERS_PER_CHECKOUT = 6
 const NUM_TROLLEYS = 500
 
 var TROLLEY_SIZES = [...]int{10, 100, 200}
@@ -151,8 +151,8 @@ func GetCustomerTimesInSeconds() (string, string) {
 	avgWait /= float64(time.Second)
 	avgProcess /= float64(time.Second)
 
-	sWait := fmt.Sprintf("%d m %d s", int(avgWait)/60, int(avgWait)%60)
-	sProcess := fmt.Sprintf("%d m %d s", int(avgProcess)/60, int(avgProcess)%60)
+	sWait := fmt.Sprintf("%dm %ds", int(avgWait)/60, int(avgWait)%60)
+	sProcess := fmt.Sprintf("%dm %ds", int(avgProcess)/60, int(avgProcess)%60)
 	return sWait, sProcess
 }
 

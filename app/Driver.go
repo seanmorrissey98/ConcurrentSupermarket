@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"runtime/trace"
 	"strconv"
 	"sync"
 	"time"
@@ -35,6 +36,18 @@ func userInput(inVal string, rangeLower float64, rangeHigher float64, ok bool) s
 }
 
 func main() {
+	f, err := os.Create("trace.out")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	err = trace.Start(f)
+	if err != nil {
+		panic(err)
+	}
+	defer trace.Stop()
+
 	rand.Seed(time.Now().UnixNano())
 
 	productsRate, _ := strconv.ParseInt(userInput("Please enter the range of products per trolley. (1-200):", 1, 200, true), 10, 64)
