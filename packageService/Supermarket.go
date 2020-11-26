@@ -12,6 +12,7 @@ var customerMutex *sync.RWMutex
 var checkoutMutex *sync.RWMutex
 
 type Supermarket struct {
+	customerCount    int
 	openStatus       bool
 	checkoutOpen     []*Checkout
 	checkoutClosed   []*Checkout
@@ -31,7 +32,7 @@ func NewSupermarket() *Supermarket {
 	customerMutex = &sync.RWMutex{}
 	checkoutMutex = &sync.RWMutex{}
 
-	s := Supermarket{true, make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, NUM_TROLLEYS), make(chan int), make(chan int)}
+	s := Supermarket{0, true, make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, NUM_TROLLEYS), make(chan int), make(chan int)}
 	s.GenerateTrolleys()
 	s.GenerateCheckouts()
 
@@ -55,7 +56,7 @@ func (s *Supermarket) GenerateCustomer() {
 		}
 
 		// Create a new customer with an id = the number they are created at in the supermarket
-		c := &Customer{id: totalNumberOfCustomersToday}
+		c := &Customer{id: s.customerCount}
 
 		//fmt.Printf("Total num of customers so far: %d\n", s.numOfTotalCustomers)
 
@@ -82,6 +83,7 @@ func (s *Supermarket) GenerateCustomer() {
 			continue
 		}
 
+		s.customerCount++
 		// Add customer to stat print
 		customerStatusChan <- CUSTOMER_NEW
 
@@ -185,13 +187,10 @@ func (s *Supermarket) FinishedCheckoutListener() {
 
 		// Check if customer is finished at a checkout when all products are processed
 		id := <-s.finishedCheckout
-		//customerMutex.RLock()
-		if s.customers[id] != nil {
-			// Empty the customers trolley
-			s.CustomerLeavesStore(id)
+		// Empty the customers trolley
+		s.CustomerLeavesStore(id)
 
-			customerStatusChan <- CUSTOMER_FINISHED
-		}
+		customerStatusChan <- CUSTOMER_FINISHED
 
 		s.CalculateOpenCheckout()
 	}

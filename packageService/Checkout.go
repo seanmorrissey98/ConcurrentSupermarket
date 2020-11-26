@@ -95,11 +95,6 @@ func (c *Checkout) ProcessCheckout() {
 	}
 }
 
-/*func (c *Checkout) RemovePersonFromLine(customer *Customer) {
-	delete(c.peopleInLine, c.lineLength)
-	c.lineLength--
-}*/
-
 func (c *Checkout) increment(wg *sync.WaitGroup) {
 	atomic.AddInt64(&c.processedProducts, 1)
 	wg.Done()
