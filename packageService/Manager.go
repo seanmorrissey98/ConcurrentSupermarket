@@ -12,14 +12,20 @@ const NUM_TROLLEYS = 500
 
 var TROLLEY_SIZES = [...]int{10, 100, 200}
 
+const (
+	CUSTOMER_NEW = iota
+	CUSTOMER_CHECKOUT
+	CUSTOMER_FINISHED
+	CUSTOMER_LOST
+	CUSTOMER_BAN
+)
+
 var (
 	productsRate int64
 	customerRate float64
 	processSpeed float64
 
-	newCustomerChan          chan int
-	customerToCheckoutChan   chan int
-	finishedAtCheckoutChan   chan int
+	customerStatusChan       chan int
 	checkoutChangeStatusChan chan int
 
 	numberOfCurrentCustomersShopping   int
@@ -27,7 +33,7 @@ var (
 	totalNumberOfCustomersInStore      int
 	totalNumberOfCustomersToday        int
 	numberOfCheckoutsOpen              int
-	numberOfCheckoutsClosed            int
+	numCustomersLost                   int
 )
 
 type Manager struct {
@@ -49,69 +55,48 @@ func NewManager(id int, wg *sync.WaitGroup, pr int64, cr float64, ps float64) *M
 	customerRate = cr * multiplier
 	processSpeed = ps
 
-	newCustomerChan = make(chan int, 256)
-	customerToCheckoutChan = make(chan int, 256)
-	finishedAtCheckoutChan = make(chan int, 256)
+	customerStatusChan = make(chan int, 256)
 	checkoutChangeStatusChan = make(chan int, 256)
 
 	numberOfCheckoutsOpen = 1
-	numberOfCheckoutsClosed = NUM_CHECKOUTS - 1
 
 	return &Manager{id: id, wg: wg}
 }
 
-func (m *Manager) NewCustomerListener() {
+func (m *Manager) CustomerStatusChangeListener() {
 	for {
-		input := <-newCustomerChan
-		if input < 0 {
-			break
-		}
+		input := <-customerStatusChan
 
-		numberOfCurrentCustomersShopping++
-		totalNumberOfCustomersInStore++
-		totalNumberOfCustomersToday++
-	}
-}
+		switch input {
+		case CUSTOMER_NEW:
+			numberOfCurrentCustomersShopping++
+			totalNumberOfCustomersInStore++
+			totalNumberOfCustomersToday++
 
-func (m *Manager) CustomerToCheckoutListener() {
-	for {
-		<-customerToCheckoutChan
-		numberOfCurrentCustomersShopping--
-		numberOfCurrentCustomersAtCheckout++
+		case CUSTOMER_CHECKOUT:
+			numberOfCurrentCustomersShopping--
+			numberOfCurrentCustomersAtCheckout++
 
-		if !m.supermarket.openStatus && numberOfCurrentCustomersShopping == 0 {
-			break
-		}
-	}
-}
+		case CUSTOMER_FINISHED:
+			numberOfCurrentCustomersAtCheckout--
+			totalNumberOfCustomersInStore--
 
-func (m *Manager) CustomerFinishedShoppingListener() {
-	for {
-		<-finishedAtCheckoutChan
-		numberOfCurrentCustomersAtCheckout--
-		totalNumberOfCustomersInStore--
+		case CUSTOMER_LOST:
+			numCustomersLost++
+			numberOfCurrentCustomersShopping--
+			totalNumberOfCustomersInStore--
 
-		if !m.supermarket.openStatus && totalNumberOfCustomersInStore == 0 {
-			break
+		case CUSTOMER_BAN:
+			// TODO: Ban customers
+		default:
+			fmt.Println("UH-OH: THINGS JUST GOT SPICY. 🌶🌶🌶")
 		}
 	}
-}
-
-// Shuts down all manager channels to avoid leaking
-func (m *Manager) ShutDownChannels() {
-
 }
 
 func (m *Manager) OpenCloseCheckoutListener() {
 	for {
-		checkoutChange := <-checkoutChangeStatusChan
-		if checkoutChange > 0 {
-			numberOfCheckoutsOpen++
-			numberOfCheckoutsClosed--
-		} else {
-			numberOfCheckoutsClosed++
-			numberOfCheckoutsOpen--
-		}
+		numberOfCheckoutsOpen += <-checkoutChangeStatusChan
 
 		if !m.supermarket.openStatus && totalNumberOfCustomersInStore == 0 {
 			break
@@ -127,9 +112,7 @@ func (m *Manager) OpenSupermarket() {
 	// Create a Supermarket
 	m.supermarket = NewSupermarket()
 
-	go m.NewCustomerListener()
-	go m.CustomerToCheckoutListener()
-	go m.CustomerFinishedShoppingListener()
+	go m.CustomerStatusChangeListener()
 	go m.OpenCloseCheckoutListener()
 
 	go m.StatPrint()
@@ -137,16 +120,17 @@ func (m *Manager) OpenSupermarket() {
 
 func (m *Manager) StatPrint() {
 	for {
-		fmt.Printf("Total Customers Today: %d, Total Customers In Store: %02d, Total Customers Shopping: %02d,"+
-			" Total Customers At Checkout: %02d, Checkouts Open: %d, Checkouts Closed: %d,"+
-			" Available Trolleys: %03d\r",
+		fmt.Printf("Total Customers Today: %03d, Total Customers In Store: %03d, Total Customers Shopping: %02d,"+
+			" Total Customers At Checkout: %02d, Checkouts Open: %d, Checkouts Closed: %d, Available Trolleys: %03d"+
+			", Customers Lost: %02d\r",
 			totalNumberOfCustomersToday, totalNumberOfCustomersInStore, numberOfCurrentCustomersShopping,
-			numberOfCurrentCustomersAtCheckout, numberOfCheckoutsOpen, numberOfCheckoutsClosed,
-			NUM_TROLLEYS-totalNumberOfCustomersInStore)
+			numberOfCurrentCustomersAtCheckout, numberOfCheckoutsOpen, NUM_CHECKOUTS-numberOfCheckoutsOpen,
+			NUM_TROLLEYS-totalNumberOfCustomersInStore, numCustomersLost)
 
 		time.Sleep(time.Millisecond * 40)
 
 		if !m.supermarket.openStatus && totalNumberOfCustomersInStore == 0 {
+			fmt.Printf("\n")
 			break
 		}
 	}
@@ -160,5 +144,4 @@ func GetTotalNumberOfCustomersToday() int {
 
 func (m *Manager) CloseSupermarket() {
 	m.supermarket.openStatus = false
-	newCustomerChan <- -1
 }
