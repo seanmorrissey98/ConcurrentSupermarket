@@ -18,14 +18,16 @@ type Checkout struct {
 	peopleInLine       chan *Customer
 	averageWaitTime    float32
 	processedProducts  int64
-	processedCustomers int
+	processedCustomers int64
 	speed              float64
 	isOpen             bool
 	finishedProcessing chan int
+
+
 }
 
 // Checkout Constructor
-func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int64, processedCustomers int, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
+func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int64, processedCustomers int64, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
 	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing}
 
 	if c.hasScanner {
@@ -78,20 +80,17 @@ func (c *Checkout) ProcessCheckout() {
 		trolley := customer.trolley
 		products := trolley.products
 
-		var w sync.WaitGroup
 
 		customer.processTime = time.Now().UnixNano()
 		for _, p := range products {
 			time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*500*c.speed)))
-			w.Add(1)
-			go c.increment(&w)
-
+			atomic.AddInt64(&c.processedProducts, 1)
 		}
-		w.Wait()
 
 		customer.processTime = time.Now().UnixNano() - customer.processTime
 		c.finishedProcessing <- customer.id
-		c.processedCustomers++
+		atomic.AddInt64(&c.processedCustomers, 1)
+
 	}
 }
 
@@ -109,7 +108,7 @@ func (c *Checkout) Close() {
 	c.peopleInLine <- nil
 }
 
-func (c *Checkout) GetTotalCustomersProcessed() int {
+func (c *Checkout) GetTotalCustomersProcessed() int64 {
 	return c.processedCustomers
 }
 
@@ -120,3 +119,4 @@ func (c *Checkout) GetCheckoutNumber() int {
 func (c *Checkout) GetTotalProductsProcessed() int64 {
 	return c.processedProducts
 }
+

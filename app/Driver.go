@@ -104,8 +104,9 @@ func getTotalProcessedProducts(c []*packageService.Checkout) int64 {
 	return total
 }
 
-func getTotalProcessedCustomers(c []*packageService.Checkout) int {
-	total := 0
+func getTotalProcessedCustomers(c []*packageService.Checkout) int64 {
+	var total int64
+	total = 0
 	for i := range c {
 		total += c[i].GetTotalCustomersProcessed()
 	}
