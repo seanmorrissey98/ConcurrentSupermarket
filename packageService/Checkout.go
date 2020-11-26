@@ -22,13 +22,11 @@ type Checkout struct {
 	speed              float64
 	isOpen             bool
 	finishedProcessing chan int
-	mutexCheckout      sync.Mutex
 }
 
 // Checkout Constructor
 func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int64, processedCustomers int, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
-	var mut = sync.Mutex{}
-	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing, mut}
+	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing}
 
 	if c.hasScanner {
 		c.speed = 0.5
@@ -55,22 +53,9 @@ func (c *Checkout) GetNumPeopleInLine() int {
 // Adds a customer a specific checkout line
 func (c *Checkout) AddPersonToLine(customer *Customer) {
 	// Use channel instead a list of customers to easily pop and send the customer
-	//c.mutexCheckout.Lock()
+	customer.waitTime = time.Now().UnixNano()
 	c.peopleInLine <- customer
 	c.lineLength++
-	/*if c.GetNumPeopleInLine() > 1 {
-		sizeLine := c.GetNumPeopleInLine()
-		for x := 0; x < sizeLine; x++ {
-			cust := <-c.peopleInLine
-			c.lineLength--
-			if customer.id != cust.id {
-				customer.peopleInFront = append(customer.peopleInFront, cust)
-			}
-			c.peopleInLine <- cust
-			c.lineLength++
-		}
-	}
-	c.mutexCheckout.Unlock()*/
 }
 
 // Processes all products in a customers trolley
@@ -80,47 +65,35 @@ func (c *Checkout) ProcessCheckout() {
 			break
 		}
 
-		var processDuration time.Duration
-		processDuration = 0
-
 		// Get the first customer in line
 		customer := <-c.peopleInLine
 		if customer == nil {
 			c.isOpen = false
 			break
-		} else {
-			c.lineLength--
 		}
+		c.lineLength--
+
+		customer.waitTime = time.Now().UnixNano() - customer.waitTime
+
 		trolley := customer.trolley
 		products := trolley.products
 
-		//var w sync.WaitGroup
+		var w sync.WaitGroup
 
+		customer.processTime = time.Now().UnixNano()
 		for _, p := range products {
-			processDuration += time.Millisecond * time.Duration(int(p.GetTime()*500*c.speed))
 			time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*500*c.speed)))
-
-			//w.Add(1)
-			//go c.increment(&w)
+			w.Add(1)
+			go c.increment(&w)
 
 		}
-		//w.Wait()
-		customer.processTime = processDuration
-		/*var sum time.Duration
-		sum = 0
-		for _, x := range customer.peopleInFront {
-			sum = sum + x.processTime
-		}
-		customer.waitTime = sum*/
+		w.Wait()
+
+		customer.processTime = time.Now().UnixNano() - customer.processTime
 		c.finishedProcessing <- customer.id
 		c.processedCustomers++
 	}
 }
-
-/*func (c *Checkout) RemovePersonFromLine(customer *Customer) {
-	delete(c.peopleInLine, c.lineLength)
-	c.lineLength--
-}*/
 
 func (c *Checkout) increment(wg *sync.WaitGroup) {
 	atomic.AddInt64(&c.processedProducts, 1)

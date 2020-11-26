@@ -1,7 +1,6 @@
 package packageService
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 	"sync"
@@ -13,6 +12,7 @@ var customerMutex *sync.RWMutex
 var checkoutMutex *sync.RWMutex
 
 type Supermarket struct {
+	customerCount    int
 	openStatus       bool
 	checkoutOpen     []*Checkout
 	checkoutClosed   []*Checkout
@@ -32,7 +32,7 @@ func NewSupermarket() *Supermarket {
 	customerMutex = &sync.RWMutex{}
 	checkoutMutex = &sync.RWMutex{}
 
-	s := Supermarket{true, make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, NUM_TROLLEYS), make(chan int), make(chan int)}
+	s := Supermarket{0, true, make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, NUM_TROLLEYS), make(chan int), make(chan int)}
 	s.GenerateTrolleys()
 	s.GenerateCheckouts()
 
@@ -56,7 +56,7 @@ func (s *Supermarket) GenerateCustomer() {
 		}
 
 		// Create a new customer with an id = the number they are created at in the supermarket
-		c := &Customer{id: totalNumberOfCustomersToday}
+		c := &Customer{id: s.customerCount}
 
 		//fmt.Printf("Total num of customers so far: %d\n", s.numOfTotalCustomers)
 
@@ -83,6 +83,7 @@ func (s *Supermarket) GenerateCustomer() {
 			continue
 		}
 
+		s.customerCount++
 		// Add customer to stat print
 		customerStatusChan <- CUSTOMER_NEW
 
@@ -101,13 +102,8 @@ func (s *Supermarket) GenerateCustomer() {
 
 // Sends customer to a checkout
 func (s *Supermarket) SendToCheckout(id int) {
-	fmt.Println("WHATEVER")
-	customerMutex.RLock()
-	c := s.customers[id]
-	customerMutex.RUnlock()
-
 	// Choose the best checkout for a customer to go to
-	checkout, pos := s.ChooseCheckout(c)
+	checkout, pos := s.ChooseCheckout()
 	// No checkout with < max number in queue - The number of lost customers (Customers will leave the store if they need to join a queue more than six deep)
 	if pos < 0 {
 		s.CustomerLeavesStore(id)
@@ -115,6 +111,9 @@ func (s *Supermarket) SendToCheckout(id int) {
 		return
 	}
 
+	customerMutex.RLock()
+	c := s.customers[id]
+	customerMutex.RUnlock()
 	checkout.AddPersonToLine(c)
 	//fmt.Printf("Customer #%d is going to checkout #%d with %d items\n", id, checkout.number, s.customers[id].GetNumProducts())
 
@@ -122,16 +121,11 @@ func (s *Supermarket) SendToCheckout(id int) {
 }
 
 // Gets the best open checkout for a customer to go to at the current time
-func (s *Supermarket) ChooseCheckout(c *Customer) (*Checkout, int) {
+func (s *Supermarket) ChooseCheckout() (*Checkout, int) {
 	min, pos := -1, -1
-	var checkout *Checkout
 
 	checkoutMutex.RLock()
 	for i := 0; i < len(s.checkoutOpen); i++ {
-		checkout = s.checkoutOpen[i]
-		if c != nil && checkout.tenOrLess && c.GetNumProducts() > 10 {
-			continue
-		}
 		// Gets the number of people in the checkout
 		// Checks if the customer can join the checkout (less than max number (6) allowed)
 		// Finds the checkout with the least amount of people
@@ -141,7 +135,12 @@ func (s *Supermarket) ChooseCheckout(c *Customer) (*Checkout, int) {
 	}
 	checkoutMutex.RUnlock()
 
-	return checkout, pos
+	var c *Checkout
+	if pos >= 0 {
+		c = s.checkoutOpen[pos]
+	}
+
+	return c, pos
 }
 
 // Generates 200 trolleys in the supermarket
@@ -188,13 +187,17 @@ func (s *Supermarket) FinishedCheckoutListener() {
 
 		// Check if customer is finished at a checkout when all products are processed
 		id := <-s.finishedCheckout
-		//customerMutex.RLock()
-		if s.customers[id] != nil {
-			// Empty the customers trolley
-			s.CustomerLeavesStore(id)
 
-			customerStatusChan <- CUSTOMER_FINISHED
-		}
+		// Updating total wait and process time to get the average later
+		// Doesn't need mutex, accessed 1 at a time here
+		customer := s.customers[id]
+		customerProcessTimeTotal += customer.processTime
+		customerWaitTimeTotal += customer.waitTime
+
+		// Empty the customers trolley
+		s.CustomerLeavesStore(id)
+
+		customerStatusChan <- CUSTOMER_FINISHED
 
 		s.CalculateOpenCheckout()
 	}
@@ -256,7 +259,7 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		}
 
 		// Choose best checkout to close
-		checkout, pos := s.ChooseCheckout(nil)
+		checkout, pos := s.ChooseCheckout()
 		checkout.Close()
 		s.checkoutClosed = append(s.checkoutClosed, checkout)
 		s.checkoutOpen = append(s.checkoutOpen[0:pos], s.checkoutOpen[pos+1:]...)
