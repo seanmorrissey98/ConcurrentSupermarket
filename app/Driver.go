@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"runtime/trace"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -68,6 +69,8 @@ func main() {
 	input := bufio.NewScanner(os.Stdin)
 	input.Scan()
 
+	fmt.Println("\nSupermarket CLosing...")
+
 	m.CloseSupermarket()
 
 	wg.Wait()
@@ -78,21 +81,33 @@ func main() {
 	totalProcessedCustomers := getTotalProcessedCustomers(checkouts)
 	totalProcessedProducts := getTotalProcessedProducts(checkouts)
 	fmt.Println()
+
+	// Sort the Checkouts array for print
+	sort.SliceStable(checkouts, func(i, j int) bool {
+		return checkouts[i].GetId() < checkouts[j].GetId()
+	})
+
+	// Print the Checkout stats in order of checkout number
+	PrintCheckoutStats(checkouts, totalProcessedCustomers, totalProcessedProducts)
+}
+
+func PrintCheckoutStats(checkouts []*packageService.Checkout, totalProcessedCustomers int64, totalProcessedProducts int64) {
 	for i := range checkouts {
 		checkout := checkouts[i]
-		fmt.Printf("CHECKOUT %d\n", checkout.GetCheckoutNumber())
+		fmt.Printf("Checkout: #%d\n", checkout.GetCheckoutNumber())
 		figure := float64(checkout.GetTotalCustomersProcessed()) / float64(totalProcessedCustomers) * 100
-		fmt.Printf("UTILIZATION: %f%s\n", figure, "%")
+		fmt.Printf("Utilisation: %.2f%s\n", figure, "%")
 		productsProcessed := checkout.GetTotalProductsProcessed()
-		fmt.Printf("PRODUCTS: %d\n", productsProcessed)
+		fmt.Printf("Products Processed: %d\n", productsProcessed)
 		percentProducts := float64(productsProcessed) / float64(totalProcessedProducts) * 100
-		fmt.Printf("PERCENT OF TOTAL PROCESSED PRODUCTS: %.2f%s\n\n", percentProducts, "%")
+		fmt.Printf("Total Products Processed (%%): %.2f%s\n\n", percentProducts, "%")
 	}
+
 	total := packageService.GetTotalNumberOfCustomersToday()
-	fmt.Printf("AVERAGE PRODUCTS PER TROLLEY: %.2f\n\n", float64(totalProcessedProducts)/float64(total))
+	fmt.Printf("Average Products Per Trolley: %.2f\n\n", float64(totalProcessedProducts)/float64(total))
 
 	avgWait, avgProcess := packageService.GetCustomerTimesInSeconds()
-	fmt.Printf("AVERAGE CUSTOMER WAIT TIME: %s, AVERAGE CUSTOMER PROCESS TIME: %s\n", avgWait, avgProcess)
+	fmt.Printf("Avergae Customer Wait Time: %s, \nAvergae Customer Process Time: %s\n", avgWait, avgProcess)
 }
 
 func getTotalProcessedProducts(c []*packageService.Checkout) int64 {

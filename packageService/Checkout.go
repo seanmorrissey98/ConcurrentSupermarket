@@ -22,8 +22,6 @@ type Checkout struct {
 	speed              float64
 	isOpen             bool
 	finishedProcessing chan int
-
-
 }
 
 // Checkout Constructor
@@ -80,7 +78,6 @@ func (c *Checkout) ProcessCheckout() {
 		trolley := customer.trolley
 		products := trolley.products
 
-
 		customer.processTime = time.Now().UnixNano()
 		for _, p := range products {
 			time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*500*c.speed)))
@@ -120,3 +117,6 @@ func (c *Checkout) GetTotalProductsProcessed() int64 {
 	return c.processedProducts
 }
 
+func (c *Checkout) GetId() int {
+	return c.number
+}
