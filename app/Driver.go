@@ -71,7 +71,7 @@ func main() {
 	m.OpenSupermarket()
 
 	// Locks program running, must be at the end of main
-	fmt.Println("\n\nPress Enter at any time to terminate simulation...")
+	fmt.Println("\nPress Enter at any time to terminate simulation...")
 	input := bufio.NewScanner(os.Stdin)
 	// Waits for Enter to be clicked
 	input.Scan()
