@@ -25,6 +25,7 @@ func (c *Customer) Shop(readyForCheckoutChan chan int) {
 		if c.GetNumProducts() == int(productsRate) {
 			break
 		}
+
 		p := NewProduct()
 		time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*200)))
 		c.trolley.AddProductToTrolley(p)

@@ -37,6 +37,7 @@ func userInput(inVal string, rangeLower float64, rangeHigher float64, ok bool) s
 }
 
 func main() {
+	// Trace for monitoring go routines
 	f, err := os.Create("trace.out")
 	if err != nil {
 		panic(err)
@@ -49,33 +50,41 @@ func main() {
 	}
 	defer trace.Stop()
 
+	// Start random seed
 	rand.Seed(time.Now().UnixNano())
 
+	// Get required inputs from the user
 	productsRate, _ := strconv.ParseInt(userInput("Please enter the range of products per trolley. (1-200):", 1, 200, true), 10, 64)
 	customerRate, _ := strconv.Atoi(userInput("Please enter the rate customers arrive at checkouts. (0-60):", 0, 60, true))
 	processSpeed, _ := strconv.ParseFloat(userInput("Please enter the range for product processing speed. (0.5-6):", 0.5, 6, false), 64)
-	fmt.Println("Products rate:", productsRate)
-	fmt.Println("Customer rate:", customerRate)
+	// Print the inputs back to the user
+	fmt.Println("Products Rate:", productsRate)
+	fmt.Println("Customer Rate:", customerRate)
 	fmt.Printf("%s %f", "Process Speed:", processSpeed)
 
+	// Add a WaitGroup for Supermarket closing when the Enter key is clicked
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	// Create manager agent and start Open a Supermarket
 	m := packageService.NewManager(1, &wg, productsRate, float64(customerRate), processSpeed)
 	m.OpenSupermarket()
 
 	// Locks program running, must be at the end of main
 	fmt.Println("\n\nPress Enter at any time to terminate simulation...")
 	input := bufio.NewScanner(os.Stdin)
+	// Waits for Enter to be clicked
 	input.Scan()
 
 	fmt.Println("\nSupermarket CLosing...")
 
+	// Start graceful shutdown of the Supermarket
 	m.CloseSupermarket()
 
+	// Wait for the Supermarket to close and the channels and go routines to shut down
 	wg.Wait()
 
-	// METRICS
+	// Get the supermarket metrics for Statistics print
 	supermarket := m.GetSupermarket()
 	checkouts := supermarket.GetAllCheckouts()
 	totalProcessedCustomers := getTotalProcessedCustomers(checkouts)

@@ -6,12 +6,15 @@ import (
 	"time"
 )
 
+// Const variables for checkouts, customer per checkout and trolleys
 const NUM_CHECKOUTS = 8
 const MAX_CUSTOMERS_PER_CHECKOUT = 6
 const NUM_TROLLEYS = 500
 
+// Global array for the 3 different trolley sizes, small, medium and large
 var TROLLEY_SIZES = [...]int{10, 100, 200}
 
+// Enum for channel switch (iota = 0, 1, 2, 3, 4)
 const (
 	CUSTOMER_NEW = iota
 	CUSTOMER_CHECKOUT
@@ -21,13 +24,17 @@ const (
 )
 
 var (
+	// Input from the user
 	productsRate int64
 	customerRate float64
 	processSpeed float64
 
-	customerStatusChan       chan int
+	// Channel for the customer status (Shopping, at checkout, finished)
+	customerStatusChan chan int
+	// Channel for the checkout status (Open, Close)
 	checkoutChangeStatusChan chan int
 
+	// Global stats
 	numberOfCurrentCustomersShopping   int
 	numberOfCurrentCustomersAtCheckout int
 	totalNumberOfCustomersInStore      int
@@ -60,11 +67,13 @@ func NewManager(id int, wg *sync.WaitGroup, pr int64, cr float64, ps float64) *M
 	customerStatusChan = make(chan int, 256)
 	checkoutChangeStatusChan = make(chan int, 256)
 
+	// Default to 1 Checkout when the store opens
 	numberOfCheckoutsOpen = 1
 
 	return &Manager{id: id, wg: wg}
 }
 
+// Creates a switch for updating various customer stats
 func (m *Manager) CustomerStatusChangeListener() {
 	for {
 		input := <-customerStatusChan
@@ -96,10 +105,12 @@ func (m *Manager) CustomerStatusChangeListener() {
 	}
 }
 
+// Listener for checkout open, close
 func (m *Manager) OpenCloseCheckoutListener() {
 	for {
 		numberOfCheckoutsOpen += <-checkoutChangeStatusChan
 
+		// Check is Supermarket is closing and no customer
 		if !m.supermarket.openStatus && totalNumberOfCustomersInStore == 0 {
 			break
 		}
@@ -110,6 +121,7 @@ func (m *Manager) GetSupermarket() *Supermarket {
 	return m.supermarket
 }
 
+// Opens the Supermarket and start go routines for channels and printing the updated stats
 func (m *Manager) OpenSupermarket() {
 	// Create a Supermarket
 	m.supermarket = NewSupermarket()
@@ -120,6 +132,7 @@ func (m *Manager) OpenSupermarket() {
 	go m.StatPrint()
 }
 
+// Prints the current stats of the Supermarket using carriage return
 func (m *Manager) StatPrint() {
 	for {
 		fmt.Printf("Total Customers Today: %03d, Total Customers In Store: %03d, Total Customers Shopping: %02d,"+
@@ -144,6 +157,7 @@ func GetTotalNumberOfCustomersToday() int {
 	return totalNumberOfCustomersToday
 }
 
+// Gets the average customer wait time and process time
 func GetCustomerTimesInSeconds() (string, string) {
 	avgWait := float64(customerWaitTimeTotal) / float64(totalNumberOfCustomersToday-numCustomersLost)
 	avgProcess := float64(customerProcessTimeTotal) / float64(totalNumberOfCustomersToday-numCustomersLost)
@@ -156,6 +170,7 @@ func GetCustomerTimesInSeconds() (string, string) {
 	return sWait, sProcess
 }
 
+// Closes the supermarket
 func (m *Manager) CloseSupermarket() {
 	m.supermarket.openStatus = false
 }

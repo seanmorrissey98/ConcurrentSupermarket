@@ -2,7 +2,6 @@ package packageService
 
 import (
 	"math/rand"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -67,33 +66,37 @@ func (c *Checkout) ProcessCheckout() {
 
 		// Get the first customer in line
 		customer := <-c.peopleInLine
+		// Check if customer is nil, break open of for loop and set checkout open to false
 		if customer == nil {
 			c.isOpen = false
 			break
 		}
 		c.lineLength--
 
+		// Start customer wait timer
 		customer.waitTime = time.Now().UnixNano() - customer.waitTime
 
 		trolley := customer.trolley
 		products := trolley.products
 
+		// Start customer process timer
 		customer.processTime = time.Now().UnixNano()
+
+		// Get all products in trolley and calculate the time to wait
 		for _, p := range products {
 			time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*500*c.speed)))
 			atomic.AddInt64(&c.processedProducts, 1)
 		}
 
+		// Stop customer process timer
 		customer.processTime = time.Now().UnixNano() - customer.processTime
+
+		// Send customer is to finished process channel
 		c.finishedProcessing <- customer.id
+
+		// Increments the processed customer after customer is finished ar checkout
 		atomic.AddInt64(&c.processedCustomers, 1)
-
 	}
-}
-
-func (c *Checkout) increment(wg *sync.WaitGroup) {
-	atomic.AddInt64(&c.processedProducts, 1)
-	wg.Done()
 }
 
 func (c *Checkout) Open() {
@@ -101,6 +104,7 @@ func (c *Checkout) Open() {
 	go c.ProcessCheckout()
 }
 
+// Passes a nil customer to the peopleInLine channel
 func (c *Checkout) Close() {
 	c.peopleInLine <- nil
 }

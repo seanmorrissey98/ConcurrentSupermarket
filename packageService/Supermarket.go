@@ -22,10 +22,6 @@ type Supermarket struct {
 	finishedCheckout chan int
 }
 
-func (s *Supermarket) GetAllCheckouts() []*Checkout {
-	return append(s.checkoutOpen, s.checkoutClosed...)
-}
-
 // Constructor for Supermarket
 func NewSupermarket() *Supermarket {
 	trolleyMutex = &sync.Mutex{}
@@ -46,11 +42,14 @@ func NewSupermarket() *Supermarket {
 // Create a customer and adds them to to the customers map in supermarket
 func (s *Supermarket) GenerateCustomer() {
 	for {
+		// Check is Supermarket is closing
 		if !s.openStatus {
 			break
 		}
 
-		time.Sleep(time.Millisecond * time.Duration(rand.Intn(int((1.0/float64(customerRate))*10000))))
+		time.Sleep(time.Millisecond * time.Duration(rand.Intn(int((1.0/customerRate)*10000))))
+
+		// Checks if the Supermarket it out of trolleys, customer will not enter store
 		if len(s.trolleys) == 0 {
 			continue
 		}
@@ -115,8 +114,8 @@ func (s *Supermarket) SendToCheckout(id int) {
 	c := s.customers[id]
 	customerMutex.RUnlock()
 	checkout.AddPersonToLine(c)
-	//fmt.Printf("Customer #%d is going to checkout #%d with %d items\n", id, checkout.number, s.customers[id].GetNumProducts())
 
+	// Change the status channel of customer, sends a 1
 	customerStatusChan <- CUSTOMER_CHECKOUT
 }
 
@@ -150,7 +149,7 @@ func (s *Supermarket) GenerateTrolleys() {
 	}
 }
 
-// Generates 8 checkouts and opens them all by default
+// Generates 8 checkouts
 func (s *Supermarket) GenerateCheckouts() {
 	// Default create 8 Checkouts when Supermarket is created
 	for i := 0; i < NUM_CHECKOUTS; i++ {
@@ -270,4 +269,8 @@ func (s *Supermarket) CalculateOpenCheckout() {
 
 		return
 	}
+}
+
+func (s *Supermarket) GetAllCheckouts() []*Checkout {
+	return append(s.checkoutOpen, s.checkoutClosed...)
 }
