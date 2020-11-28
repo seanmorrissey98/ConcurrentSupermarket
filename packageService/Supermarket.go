@@ -100,8 +100,12 @@ func (s *Supermarket) GenerateCustomer() {
 
 // Sends customer to a checkout
 func (s *Supermarket) SendToCheckout(id int) {
+	customerMutex.RLock()
+	c := s.customers[id]
+	customerMutex.RUnlock()
+
 	// Choose the best checkout for a customer to go to
-	checkout, pos := s.ChooseCheckout()
+	checkout, pos := s.ChooseCheckout(c.GetNumProducts())
 	// No checkout with < max number in queue - The number of lost customers (Customers will leave the store if they need to join a queue more than six deep)
 	if pos < 0 {
 		s.CustomerLeavesStore(id)
@@ -109,45 +113,27 @@ func (s *Supermarket) SendToCheckout(id int) {
 		return
 	}
 
-	customerMutex.RLock()
-	c := s.customers[id]
-	customerMutex.RUnlock()
-
-
-	for {
-		checkoutMutex.RLock()
-		checkout, _ = s.ChooseCheckout()
-		if (checkout.tenOrLess && c.GetNumProducts() > 10) {
-			continue
-		}
-		checkout.AddPersonToLine(c)
-		checkoutMutex.RUnlock()
-		break
-	}
-
-
-
-
-
+	checkout.AddPersonToLine(c)
 
 	// Change the status channel of customer, sends a 1
 	customerStatusChan <- CUSTOMER_CHECKOUT
 }
 
 // Gets the best open checkout for a customer to go to at the current time
-func (s *Supermarket) ChooseCheckout() (*Checkout, int) {
+func (s *Supermarket) ChooseCheckout(numProducts int) (*Checkout, int) {
 	min, pos := -1, -1
 
-	//checkoutMutex.RLock()
+	checkoutMutex.RLock()
 	for i := 0; i < len(s.checkoutOpen); i++ {
-		// Gets the number of people in the checkout
+		// Gets the number of people in the checkout and if the checkout is 'tenOrLess'
 		// Checks if the customer can join the checkout (less than max number (6) allowed)
+		// Ensure only customers with 10 or less items can go to the 10 or less checkouts
 		// Finds the checkout with the least amount of people
-		if num := s.checkoutOpen[i].GetNumPeopleInLine(); (num < min || min < 0) && num < MAX_CUSTOMERS_PER_CHECKOUT {
+		if num, tenOrLess := s.checkoutOpen[i].GetNumPeopleInLine(), s.checkoutOpen[i].tenOrLess; ((tenOrLess && numProducts <= 10) || !tenOrLess) && (num < min || min < 0) && num < MAX_CUSTOMERS_PER_CHECKOUT {
 			min, pos = num, i
 		}
 	}
-	//checkoutMutex.RUnlock()
+	checkoutMutex.RUnlock()
 
 	var c *Checkout
 	if pos >= 0 {
@@ -167,12 +153,12 @@ func (s *Supermarket) GenerateTrolleys() {
 // Generates 8 checkouts
 func (s *Supermarket) GenerateCheckouts() {
 	// Default create 8 Checkouts when Supermarket is created
-	for i := 0; i < NUM_CHECKOUTS; i++ {
+	for i := 0; i < NUM_CHECKOUTS+NUM_SMALL_CHECKOUTS; i++ {
 		hasScanner := rand.Float64() < 0.5
 		if i == 0 {
 			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
 		} else {
-			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
+			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, i >= NUM_CHECKOUTS, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
 		}
 	}
 }
@@ -261,7 +247,6 @@ func (s *Supermarket) CalculateOpenCheckout() {
 			return
 		}
 
-
 		// Open first checkout in closed checkout slice
 		s.checkoutClosed[0].Open()
 		s.checkoutOpen = append(s.checkoutOpen, s.checkoutClosed[0])
@@ -282,7 +267,10 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		}
 
 		// Choose best checkout to close
-		checkout, pos := s.ChooseCheckout()
+		checkout, pos := s.ChooseCheckout(0)
+		if pos < 0 {
+			return
+		}
 		checkout.Close()
 		s.checkoutClosed = append(s.checkoutClosed, checkout)
 		s.checkoutOpen = append(s.checkoutOpen[0:pos], s.checkoutOpen[pos+1:]...)

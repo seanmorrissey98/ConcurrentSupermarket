@@ -8,6 +8,7 @@ import (
 
 // Const variables for checkouts, customer per checkout and trolleys
 const NUM_CHECKOUTS = 8
+const NUM_SMALL_CHECKOUTS = 4
 const MAX_CUSTOMERS_PER_CHECKOUT = 6
 const NUM_TROLLEYS = 500
 
@@ -139,7 +140,7 @@ func (m *Manager) StatPrint() {
 			" Total Customers At Checkout: %02d, Checkouts Open: %d, Checkouts Closed: %d, Available Trolleys: %03d"+
 			", Customers Lost: %02d\r",
 			totalNumberOfCustomersToday, totalNumberOfCustomersInStore, numberOfCurrentCustomersShopping,
-			numberOfCurrentCustomersAtCheckout, numberOfCheckoutsOpen, NUM_CHECKOUTS-numberOfCheckoutsOpen,
+			numberOfCurrentCustomersAtCheckout, numberOfCheckoutsOpen, NUM_CHECKOUTS+NUM_SMALL_CHECKOUTS-numberOfCheckoutsOpen,
 			NUM_TROLLEYS-totalNumberOfCustomersInStore, numCustomersLost)
 		time.Sleep(time.Millisecond * 40)
 
