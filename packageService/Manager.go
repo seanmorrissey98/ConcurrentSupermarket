@@ -42,6 +42,7 @@ var (
 	totalNumberOfCustomersToday        int
 	numberOfCheckoutsOpen              int
 	numCustomersLost                   int
+	numCustomersBanned                 int
 	customerProcessTimeTotal           int64
 	customerWaitTimeTotal              int64
 )
@@ -99,7 +100,9 @@ func (m *Manager) CustomerStatusChangeListener() {
 			totalNumberOfCustomersInStore--
 
 		case CUSTOMER_BAN:
-			// TODO: Ban customers
+			numCustomersBanned++
+			numberOfCurrentCustomersShopping--
+			totalNumberOfCustomersInStore--
 		default:
 			fmt.Println("UH-OH: THINGS JUST GOT SPICY. 🌶🌶🌶")
 		}
@@ -142,10 +145,10 @@ func (m *Manager) StatPrint() {
 	for {
 		fmt.Printf("Total Customers Today: %03d, Total Customers In Store: %03d, Total Customers Shopping: %02d,"+
 			" Total Customers At Checkout: %02d, Checkouts Open: %d, Checkouts Closed: %d, Available Trolleys: %03d"+
-			", Customers Lost: %02d\r",
+			", Customers Lost: %02d, Customers Banned: %d\r",
 			totalNumberOfCustomersToday, totalNumberOfCustomersInStore, numberOfCurrentCustomersShopping,
 			numberOfCurrentCustomersAtCheckout, numberOfCheckoutsOpen, NUM_CHECKOUTS+NUM_SMALL_CHECKOUTS-numberOfCheckoutsOpen,
-			NUM_TROLLEYS-totalNumberOfCustomersInStore, numCustomersLost)
+			NUM_TROLLEYS-totalNumberOfCustomersInStore, numCustomersLost, numCustomersBanned)
 		time.Sleep(time.Millisecond * 40)
 
 		if !m.supermarket.openStatus && totalNumberOfCustomersInStore == 0 {

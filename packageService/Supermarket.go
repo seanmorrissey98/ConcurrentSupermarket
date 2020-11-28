@@ -115,6 +115,14 @@ func (s *Supermarket) SendToCheckout(id int) {
 		return
 	}
 
+	// Checks if customer is impatient and joins a ten or less checkout with more tha 10 items
+	// Manager has a 50% chance of finding them and banning them
+	if c.impatient && c.GetNumProducts() > 10 && checkout.tenOrLess && rand.Float64() < 0.5 {
+		s.CustomerLeavesStore(id)
+		customerStatusChan <- CUSTOMER_BAN
+		return
+	}
+
 	checkout.AddPersonToLine(c)
 
 	// Change the status channel of customer, sends a 1
