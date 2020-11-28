@@ -41,6 +41,7 @@ func NewSupermarket() *Supermarket {
 
 // Create a customer and adds them to to the customers map in supermarket
 func (s *Supermarket) GenerateCustomer() {
+	isImpatient:=false
 	for {
 		// Check is Supermarket is closing
 		if !s.openStatus {
@@ -53,9 +54,15 @@ func (s *Supermarket) GenerateCustomer() {
 		if len(s.trolleys) == 0 {
 			continue
 		}
+		// 15% chance of impatient Customer
+		if rand.Float64() < 0.15 {
+			isImpatient=true
+		}else{
+			isImpatient=false
+		}
 
 		// Create a new customer with an id = the number they are created at in the supermarket
-		c := &Customer{id: s.customerCount, age: 20 + rand.Intn(50)}
+		c := &Customer{id: s.customerCount,impatient: isImpatient, age: 20 + rand.Intn(50)}
 		//fmt.Printf("Total num of customers so far: %d\n", s.numOfTotalCustomers)
 
 		// Create 3 different trolley sizes modelling a basket, small trolley and large trolley
@@ -118,6 +125,9 @@ func (s *Supermarket) SendToCheckout(id int) {
 		checkoutMutex.RLock()
 		checkout, _ = s.ChooseCheckout()
 		if (checkout.tenOrLess && c.GetNumProducts() > 10) {
+			continue
+		}
+		if (checkout.tenOrLess && c.impatient ==false) {
 			continue
 		}
 		checkout.AddPersonToLine(c)
