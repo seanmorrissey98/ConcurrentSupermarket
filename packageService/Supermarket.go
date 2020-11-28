@@ -41,7 +41,6 @@ func NewSupermarket() *Supermarket {
 
 // Create a customer and adds them to to the customers map in supermarket
 func (s *Supermarket) GenerateCustomer() {
-	isImpatient:=false
 	for {
 		// Check is Supermarket is closing
 		if !s.openStatus {
@@ -54,15 +53,11 @@ func (s *Supermarket) GenerateCustomer() {
 		if len(s.trolleys) == 0 {
 			continue
 		}
-		// 15% chance of impatient Customer
-		if rand.Float64() < 0.15 {
-			isImpatient=true
-		}else{
-			isImpatient=false
-		}
+
+		isImpatient := rand.Float64() < 0.15
 
 		// Create a new customer with an id = the number they are created at in the supermarket
-		c := &Customer{id: s.customerCount,impatient: isImpatient, age: 20 + rand.Intn(50)}
+		c := &Customer{id: s.customerCount, impatient: isImpatient, age: 20 + rand.Intn(50)}
 		//fmt.Printf("Total num of customers so far: %d\n", s.numOfTotalCustomers)
 
 		// Create 3 different trolley sizes modelling a basket, small trolley and large trolley
@@ -107,8 +102,12 @@ func (s *Supermarket) GenerateCustomer() {
 
 // Sends customer to a checkout
 func (s *Supermarket) SendToCheckout(id int) {
+	customerMutex.RLock()
+	c := s.customers[id]
+	customerMutex.RUnlock()
+
 	// Choose the best checkout for a customer to go to
-	checkout, pos := s.ChooseCheckout()
+	checkout, pos := s.ChooseCheckout(c.GetNumProducts())
 	// No checkout with < max number in queue - The number of lost customers (Customers will leave the store if they need to join a queue more than six deep)
 	if pos < 0 {
 		s.CustomerLeavesStore(id)
@@ -116,48 +115,27 @@ func (s *Supermarket) SendToCheckout(id int) {
 		return
 	}
 
-	customerMutex.RLock()
-	c := s.customers[id]
-	customerMutex.RUnlock()
-
-
-	for {
-		checkoutMutex.RLock()
-		checkout, _ = s.ChooseCheckout()
-		if (checkout.tenOrLess && c.impatient ==false) {
-			continue
-		}
-		if (checkout.tenOrLess && c.GetNumProducts() > 10) {
-			continue
-		}
-		checkout.AddPersonToLine(c)
-		checkoutMutex.RUnlock()
-		break
-	}
-
-
-
-
-
+	checkout.AddPersonToLine(c)
 
 	// Change the status channel of customer, sends a 1
 	customerStatusChan <- CUSTOMER_CHECKOUT
 }
 
 // Gets the best open checkout for a customer to go to at the current time
-func (s *Supermarket) ChooseCheckout() (*Checkout, int) {
+func (s *Supermarket) ChooseCheckout(numProducts int) (*Checkout, int) {
 	min, pos := -1, -1
 
-	//checkoutMutex.RLock()
+	checkoutMutex.RLock()
 	for i := 0; i < len(s.checkoutOpen); i++ {
-		// Gets the number of people in the checkout
+		// Gets the number of people in the checkout and if the checkout is 'tenOrLess'
 		// Checks if the customer can join the checkout (less than max number (6) allowed)
+		// Ensure only customers with 10 or less items can go to the 10 or less checkouts
 		// Finds the checkout with the least amount of people
-		if num := s.checkoutOpen[i].GetNumPeopleInLine(); (num < min || min < 0) && num < MAX_CUSTOMERS_PER_CHECKOUT {
+		if num, tenOrLess := s.checkoutOpen[i].GetNumPeopleInLine(), s.checkoutOpen[i].tenOrLess; ((tenOrLess && numProducts <= 10) || !tenOrLess) && (num < min || min < 0) && num < MAX_CUSTOMERS_PER_CHECKOUT {
 			min, pos = num, i
 		}
 	}
-	//checkoutMutex.RUnlock()
+	checkoutMutex.RUnlock()
 
 	var c *Checkout
 	if pos >= 0 {
@@ -177,12 +155,12 @@ func (s *Supermarket) GenerateTrolleys() {
 // Generates 8 checkouts
 func (s *Supermarket) GenerateCheckouts() {
 	// Default create 8 Checkouts when Supermarket is created
-	for i := 0; i < NUM_CHECKOUTS; i++ {
+	for i := 0; i < NUM_CHECKOUTS+NUM_SMALL_CHECKOUTS; i++ {
 		hasScanner := rand.Float64() < 0.5
 		if i == 0 {
 			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
 		} else {
-			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
+			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, i >= NUM_CHECKOUTS, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
 		}
 	}
 }
@@ -255,14 +233,6 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		return
 	}
 
-	//if len(s.checkoutOpen) == 1 {
-	//	if s.checkoutOpen[0].GetSeniorCheckout() {
-	//
-	//	}
-	//}
-	//
-	//
-	//
 	// Calculate threshold for opening a checkout
 	if calculationOfThreshold > numOfOpenCheckouts {
 		// If there are no more checkouts to open
@@ -270,7 +240,6 @@ func (s *Supermarket) CalculateOpenCheckout() {
 			//fmt.Printf("All checkouts currently open. The current number of customers is: %d\n", numOfCurrentCustomers)
 			return
 		}
-
 
 		// Open first checkout in closed checkout slice
 		s.checkoutClosed[0].Open()
@@ -292,7 +261,10 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		}
 
 		// Choose best checkout to close
-		checkout, pos := s.ChooseCheckout()
+		checkout, pos := s.ChooseCheckout(0)
+		if pos < 0 {
+			return
+		}
 		checkout.Close()
 		s.checkoutClosed = append(s.checkoutClosed, checkout)
 		s.checkoutOpen = append(s.checkoutOpen[0:pos], s.checkoutOpen[pos+1:]...)

@@ -1,7 +1,6 @@
 package packageService
 
 import (
-	"math/rand"
 	"sync/atomic"
 	"time"
 )
@@ -35,10 +34,8 @@ func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner boo
 		c.speed = 1.0
 	}
 
-	rand.Seed(time.Now().UnixNano())
-	c.tenOrLess = rand.Float64() < 0.25
-
-
+	//rand.Seed(time.Now().UnixNano())
+	//c.tenOrLess = rand.Float64() < 0.25
 
 	// Starts a goroutine for processing all products in a trolley
 	if isOpen {
@@ -101,13 +98,12 @@ func (c *Checkout) ProcessCheckout() {
 			ageMultiplier = 1.5
 		}
 
-
 		// Start customer process timer
 		customer.processTime = time.Now().UnixNano()
 
 		// Get all products in trolley and calculate the time to wait
 		for _, p := range products {
-			time.Sleep(time.Millisecond * time.Duration(float64(p.GetTime()*500*c.speed) * ageMultiplier))
+			time.Sleep(time.Millisecond * time.Duration(p.GetTime()*500*c.speed*ageMultiplier))
 			atomic.AddInt64(&c.processedProducts, 1)
 			atomic.AddInt64(&c.processedProductsTime, int64(p.GetTime()*500*c.speed))
 		}
@@ -148,4 +144,3 @@ func (c *Checkout) GetTotalProductsProcessed() int64 {
 func (c *Checkout) GetId() int {
 	return c.number
 }
-
