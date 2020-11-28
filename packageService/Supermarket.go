@@ -55,8 +55,7 @@ func (s *Supermarket) GenerateCustomer() {
 		}
 
 		// Create a new customer with an id = the number they are created at in the supermarket
-		c := &Customer{id: s.customerCount}
-
+		c := &Customer{id: s.customerCount, age: 20 + rand.Intn(50)}
 		//fmt.Printf("Total num of customers so far: %d\n", s.numOfTotalCustomers)
 
 		// Create 3 different trolley sizes modelling a basket, small trolley and large trolley
@@ -113,7 +112,23 @@ func (s *Supermarket) SendToCheckout(id int) {
 	customerMutex.RLock()
 	c := s.customers[id]
 	customerMutex.RUnlock()
-	checkout.AddPersonToLine(c)
+
+
+	for {
+		checkoutMutex.RLock()
+		checkout, _ = s.ChooseCheckout()
+		if (checkout.tenOrLess && c.GetNumProducts() > 10) {
+			continue
+		}
+		checkout.AddPersonToLine(c)
+		checkoutMutex.RUnlock()
+		break
+	}
+
+
+
+
+
 
 	// Change the status channel of customer, sends a 1
 	customerStatusChan <- CUSTOMER_CHECKOUT
@@ -123,7 +138,7 @@ func (s *Supermarket) SendToCheckout(id int) {
 func (s *Supermarket) ChooseCheckout() (*Checkout, int) {
 	min, pos := -1, -1
 
-	checkoutMutex.RLock()
+	//checkoutMutex.RLock()
 	for i := 0; i < len(s.checkoutOpen); i++ {
 		// Gets the number of people in the checkout
 		// Checks if the customer can join the checkout (less than max number (6) allowed)
@@ -132,7 +147,7 @@ func (s *Supermarket) ChooseCheckout() (*Checkout, int) {
 			min, pos = num, i
 		}
 	}
-	checkoutMutex.RUnlock()
+	//checkoutMutex.RUnlock()
 
 	var c *Checkout
 	if pos >= 0 {
@@ -230,6 +245,14 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		return
 	}
 
+	//if len(s.checkoutOpen) == 1 {
+	//	if s.checkoutOpen[0].GetSeniorCheckout() {
+	//
+	//	}
+	//}
+	//
+	//
+	//
 	// Calculate threshold for opening a checkout
 	if calculationOfThreshold > numOfOpenCheckouts {
 		// If there are no more checkouts to open
@@ -237,6 +260,7 @@ func (s *Supermarket) CalculateOpenCheckout() {
 			//fmt.Printf("All checkouts currently open. The current number of customers is: %d\n", numOfCurrentCustomers)
 			return
 		}
+
 
 		// Open first checkout in closed checkout slice
 		s.checkoutClosed[0].Open()
