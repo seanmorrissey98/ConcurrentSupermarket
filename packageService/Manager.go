@@ -107,7 +107,7 @@ func (m *Manager) CustomerStatusChangeListener() {
 }
 
 func GetNumCheckouts() int {
-	return NUM_CHECKOUTS
+	return NUM_CHECKOUTS + NUM_SMALL_CHECKOUTS
 }
 
 // Listener for checkout open, close
