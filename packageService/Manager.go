@@ -145,7 +145,6 @@ func (m *Manager) StatPrint() {
 			totalNumberOfCustomersToday, totalNumberOfCustomersInStore, numberOfCurrentCustomersShopping,
 			numberOfCurrentCustomersAtCheckout, numberOfCheckoutsOpen, NUM_CHECKOUTS-numberOfCheckoutsOpen,
 			NUM_TROLLEYS-totalNumberOfCustomersInStore, numCustomersLost)
-
 		time.Sleep(time.Millisecond * 40)
 
 		if !m.supermarket.openStatus && totalNumberOfCustomersInStore == 0 {
