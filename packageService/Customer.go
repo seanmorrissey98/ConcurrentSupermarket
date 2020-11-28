@@ -30,12 +30,13 @@ func (c *Customer) Shop(readyForCheckoutChan chan int) {
 		if c.GetNumProducts() == int(productsRate) {
 			break
 		}
+
 		if c.age > 65 {
 			speedMultiplier = 1.5
 		}
 
 		p := NewProduct()
-		time.Sleep(time.Millisecond * time.Duration(float64(p.GetTime()*200) * speedMultiplier))
+		time.Sleep(time.Millisecond * time.Duration(p.GetTime()*200*speedMultiplier))
 		c.trolley.AddProductToTrolley(p)
 		c.shopTime += int64(p.GetTime() * 200)
 		if c.trolley.IsFull() {

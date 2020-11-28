@@ -107,7 +107,7 @@ func (s *Supermarket) SendToCheckout(id int) {
 	customerMutex.RUnlock()
 
 	// Choose the best checkout for a customer to go to
-	checkout, pos := s.ChooseCheckout(c.GetNumProducts())
+	checkout, pos := s.ChooseCheckout(c.GetNumProducts(), c.impatient)
 	// No checkout with < max number in queue - The number of lost customers (Customers will leave the store if they need to join a queue more than six deep)
 	if pos < 0 {
 		s.CustomerLeavesStore(id)
@@ -122,7 +122,7 @@ func (s *Supermarket) SendToCheckout(id int) {
 }
 
 // Gets the best open checkout for a customer to go to at the current time
-func (s *Supermarket) ChooseCheckout(numProducts int) (*Checkout, int) {
+func (s *Supermarket) ChooseCheckout(numProducts int, isImpatient bool) (*Checkout, int) {
 	min, pos := -1, -1
 
 	checkoutMutex.RLock()
@@ -131,7 +131,7 @@ func (s *Supermarket) ChooseCheckout(numProducts int) (*Checkout, int) {
 		// Checks if the customer can join the checkout (less than max number (6) allowed)
 		// Ensure only customers with 10 or less items can go to the 10 or less checkouts
 		// Finds the checkout with the least amount of people
-		if num, tenOrLess := s.checkoutOpen[i].GetNumPeopleInLine(), s.checkoutOpen[i].tenOrLess; ((tenOrLess && numProducts <= 10) || !tenOrLess) && (num < min || min < 0) && num < MAX_CUSTOMERS_PER_CHECKOUT {
+		if num, tenOrLess := s.checkoutOpen[i].GetNumPeopleInLine(), s.checkoutOpen[i].tenOrLess; ((tenOrLess && (numProducts <= 10 || isImpatient)) || !tenOrLess) && (num < min || min < 0) && num < MAX_CUSTOMERS_PER_CHECKOUT {
 			min, pos = num, i
 		}
 	}
@@ -261,7 +261,7 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		}
 
 		// Choose best checkout to close
-		checkout, pos := s.ChooseCheckout(0)
+		checkout, pos := s.ChooseCheckout(0, false)
 		if pos < 0 {
 			return
 		}
