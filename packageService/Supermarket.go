@@ -124,10 +124,10 @@ func (s *Supermarket) SendToCheckout(id int) {
 	for {
 		checkoutMutex.RLock()
 		checkout, _ = s.ChooseCheckout()
-		if (checkout.tenOrLess && c.GetNumProducts() > 10) {
+		if (checkout.tenOrLess && c.impatient ==false) {
 			continue
 		}
-		if (checkout.tenOrLess && c.impatient ==false) {
+		if (checkout.tenOrLess && c.GetNumProducts() > 10) {
 			continue
 		}
 		checkout.AddPersonToLine(c)
