@@ -7,25 +7,27 @@ import (
 )
 
 type Checkout struct {
-	number             int
-	tenOrLess          bool
-	isSelfCheckout     bool
-	hasScanner         bool
-	inUse              bool
-	lineLength         int
-	isLineFull         bool
-	peopleInLine       chan *Customer
-	averageWaitTime    float32
-	processedProducts  int64
-	processedCustomers int64
-	speed              float64
-	isOpen             bool
-	finishedProcessing chan int
+	number                   int
+	tenOrLess                bool
+	isSelfCheckout           bool
+	hasScanner               bool
+	inUse                    bool
+	lineLength               int
+	isLineFull               bool
+	peopleInLine             chan *Customer
+	averageWaitTime          float32
+	processedProducts        int64
+	processedCustomers       int64
+	speed                    float64
+	isOpen                   bool
+	finishedProcessing       chan int
+	firstCustomerArrivalTime int64
+	processedProductsTime    int64
 }
 
 // Checkout Constructor
 func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int64, processedCustomers int64, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
-	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing}
+	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing, 0, 0}
 
 	if c.hasScanner {
 		c.speed = 0.5
@@ -57,19 +59,30 @@ func (c *Checkout) AddPersonToLine(customer *Customer) {
 	c.lineLength++
 }
 
+func (c *Checkout) GetProcessedProductsTime() int64 {
+	return c.processedProductsTime
+}
+
+func (c *Checkout) GetFirstCustomerArrivalTime() int64 {
+	return c.firstCustomerArrivalTime
+}
+
 // Processes all products in a customers trolley
 func (c *Checkout) ProcessCheckout() {
 	for {
 		if !c.isOpen && c.lineLength == 0 {
 			break
 		}
-
 		// Get the first customer in line
 		customer := <-c.peopleInLine
 		// Check if customer is nil, break open of for loop and set checkout open to false
 		if customer == nil {
 			c.isOpen = false
 			break
+		}
+
+		if c.processedCustomers == 0 {
+			c.firstCustomerArrivalTime = customer.shopTime
 		}
 		c.lineLength--
 
@@ -86,6 +99,7 @@ func (c *Checkout) ProcessCheckout() {
 		for _, p := range products {
 			time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*500*c.speed)))
 			atomic.AddInt64(&c.processedProducts, 1)
+			atomic.AddInt64(&c.processedProductsTime, int64(p.GetTime()*500*c.speed))
 		}
 
 		// Stop customer process timer

@@ -101,10 +101,23 @@ func main() {
 }
 
 func PrintCheckoutStats(checkouts []*packageService.Checkout, totalProcessedCustomers int64, totalProcessedProducts int64) {
+	var highest int64 = 0
+	var totalUtilization float64
+	for i := range checkouts {
+		if checkouts[i].GetFirstCustomerArrivalTime()+checkouts[i].GetProcessedProductsTime() > highest {
+			highest = checkouts[i].GetFirstCustomerArrivalTime() + checkouts[i].GetProcessedProductsTime()
+		}
+	}
+
 	for i := range checkouts {
 		checkout := checkouts[i]
 		fmt.Printf("Checkout: #%d\n", checkout.GetCheckoutNumber())
-		figure := float64(checkout.GetTotalCustomersProcessed()) / float64(totalProcessedCustomers) * 100
+		// Utilization based on the amount of customers the checkout processed in comparison to all the customers who were in the shop.
+		//figure := float64(checkout.GetTotalCustomersProcessed()) / float64(totalProcessedCustomers) * 100
+
+		// Utilization based on time checkout was open compared to time shop was open.
+		figure := float64(checkout.GetProcessedProductsTime()) / float64(highest) * 100
+		totalUtilization += figure
 		fmt.Printf("Utilisation: %.2f%s\n", figure, "%")
 		productsProcessed := checkout.GetTotalProductsProcessed()
 		fmt.Printf("Products Processed: %d\n", productsProcessed)
@@ -116,7 +129,9 @@ func PrintCheckoutStats(checkouts []*packageService.Checkout, totalProcessedCust
 	fmt.Printf("Average Products Per Trolley: %.2f\n\n", float64(totalProcessedProducts)/float64(total))
 
 	avgWait, avgProcess := packageService.GetCustomerTimesInSeconds()
-	fmt.Printf("Avergae Customer Wait Time: %s, \nAvergae Customer Process Time: %s\n", avgWait, avgProcess)
+	fmt.Printf("Average Customer Wait Time: %s, \nAvergae Customer Process Time: %s\n", avgWait, avgProcess)
+
+	fmt.Printf("Average Checkout Utilisation: %.2f%s\n", totalUtilization/float64(packageService.GetNumCheckouts()), "%")
 }
 
 func getTotalProcessedProducts(c []*packageService.Checkout) int64 {

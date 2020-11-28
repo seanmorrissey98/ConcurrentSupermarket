@@ -16,7 +16,7 @@ type Customer struct {
 	mutex       sync.Mutex
 	processTime int64
 	waitTime    int64
-	shopTime    int
+	shopTime    int64
 }
 
 // Shop lets the customer get products and add them to their trolley until the reach capacity of trolley or break the random < 0.05
@@ -30,7 +30,7 @@ func (c *Customer) Shop(readyForCheckoutChan chan int) {
 		p := NewProduct()
 		time.Sleep(time.Millisecond * time.Duration(int(p.GetTime()*200)))
 		c.trolley.AddProductToTrolley(p)
-		c.shopTime += int(p.GetTime() * 200)
+		c.shopTime += int64(p.GetTime() * 200)
 		if c.trolley.IsFull() {
 			break
 		}
