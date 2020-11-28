@@ -130,6 +130,7 @@ func (s *Supermarket) ChooseCheckout(numProducts int, isImpatient bool) (*Checko
 		// Gets the number of people in the checkout and if the checkout is 'tenOrLess'
 		// Checks if the customer can join the checkout (less than max number (6) allowed)
 		// Ensure only customers with 10 or less items can go to the 10 or less checkouts
+		// Added impatience variable
 		// Finds the checkout with the least amount of people
 		if num, tenOrLess := s.checkoutOpen[i].GetNumPeopleInLine(), s.checkoutOpen[i].tenOrLess; ((tenOrLess && (numProducts <= 10 || isImpatient)) || !tenOrLess) && (num < min || min < 0) && num < MAX_CUSTOMERS_PER_CHECKOUT {
 			min, pos = num, i
