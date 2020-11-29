@@ -6,9 +6,9 @@ import (
 )
 
 type Checkout struct {
-	number                   int
+	Number                   int
 	tenOrLess                bool
-	isSeniorCheckout 		 bool
+	isSeniorCheckout         bool
 	isSelfCheckout           bool
 	hasScanner               bool
 	inUse                    bool
@@ -16,8 +16,8 @@ type Checkout struct {
 	isLineFull               bool
 	peopleInLine             chan *Customer
 	averageWaitTime          float32
-	processedProducts        int64
-	processedCustomers       int64
+	ProcessedProducts        int64
+	ProcessedCustomers       int64
 	speed                    float64
 	isOpen                   bool
 	finishedProcessing       chan int
@@ -34,9 +34,6 @@ func NewCheckout(number int, tenOrLess bool, isSeniorCheckout bool, isSelfChecko
 	} else {
 		c.speed = 1.0
 	}
-
-	//rand.Seed(time.Now().UnixNano())
-	//c.tenOrLess = rand.Float64() < 0.25
 
 	// Starts a goroutine for processing all products in a trolley
 	if isOpen {
@@ -81,7 +78,7 @@ func (c *Checkout) ProcessCheckout() {
 			break
 		}
 
-		if c.processedCustomers == 0 {
+		if c.ProcessedCustomers == 0 {
 			c.firstCustomerArrivalTime = customer.shopTime
 		}
 		c.lineLength--
@@ -92,7 +89,7 @@ func (c *Checkout) ProcessCheckout() {
 		trolley := customer.trolley
 		products := trolley.products
 
-		age := customer.GetAge()
+		age := customer.age
 		var ageMultiplier float64
 		ageMultiplier = 1
 		if age > 65 {
@@ -105,7 +102,7 @@ func (c *Checkout) ProcessCheckout() {
 		// Get all products in trolley and calculate the time to wait
 		for _, p := range products {
 			time.Sleep(time.Millisecond * time.Duration(p.GetTime()*500*c.speed*ageMultiplier))
-			atomic.AddInt64(&c.processedProducts, 1)
+			atomic.AddInt64(&c.ProcessedProducts, 1)
 			atomic.AddInt64(&c.processedProductsTime, int64(p.GetTime()*500*c.speed))
 		}
 
@@ -116,7 +113,7 @@ func (c *Checkout) ProcessCheckout() {
 		c.finishedProcessing <- customer.id
 
 		// Increments the processed customer after customer is finished ar checkout
-		atomic.AddInt64(&c.processedCustomers, 1)
+		atomic.AddInt64(&c.ProcessedCustomers, 1)
 	}
 }
 
@@ -128,28 +125,4 @@ func (c *Checkout) Open() {
 // Passes a nil customer to the peopleInLine channel
 func (c *Checkout) Close() {
 	c.peopleInLine <- nil
-}
-
-func (c *Checkout) GetTotalCustomersProcessed() int64 {
-	return c.processedCustomers
-}
-
-func (c *Checkout) GetCheckoutNumber() int {
-	return c.number
-}
-
-func (c *Checkout) GetTotalProductsProcessed() int64 {
-	return c.processedProducts
-}
-
-func (c *Checkout) GetId() int {
-	return c.number
-}
-
-func (c *Checkout) SetSeniorCheckout(isSenior bool) {
-	c.isSeniorCheckout = isSenior
-}
-
-func (c *Checkout) GetSeniorCheckout() bool  {
-	return c.isSeniorCheckout
 }

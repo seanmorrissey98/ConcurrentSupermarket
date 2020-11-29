@@ -246,8 +246,8 @@ func (s *Supermarket) CalculateOpenCheckout() {
 	}
 
 	if len(s.checkoutOpen) == 1 {
-		if s.checkoutOpen[0].GetSeniorCheckout() {
-			s.checkoutOpen[0].SetSeniorCheckout(false)
+		if s.checkoutOpen[0].isSeniorCheckout {
+			s.checkoutOpen[0].isSeniorCheckout = false
 		}
 	}
 
@@ -265,8 +265,6 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		s.checkoutClosed = s.checkoutClosed[1:]
 
 		checkoutChangeStatusChan <- 1
-
-		//fmt.Printf("1 new chekout opened. We now have %d open checkouts.\n", len(s.checkoutOpen))
 
 		return
 	}

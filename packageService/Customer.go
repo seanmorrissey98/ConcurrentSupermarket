@@ -55,7 +55,3 @@ func (c *Customer) Shop(readyForCheckoutChan chan int) {
 func (c *Customer) GetNumProducts() int {
 	return len(c.trolley.products)
 }
-
-func (c *Customer) GetAge() int {
-	return c.age
-}

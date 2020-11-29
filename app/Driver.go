@@ -93,7 +93,7 @@ func main() {
 
 	// Sort the Checkouts array for print
 	sort.SliceStable(checkouts, func(i, j int) bool {
-		return checkouts[i].GetId() < checkouts[j].GetId()
+		return checkouts[i].Number < checkouts[j].Number
 	})
 
 	// Print the Checkout stats in order of checkout number
@@ -111,7 +111,7 @@ func PrintCheckoutStats(checkouts []*packageService.Checkout, totalProcessedCust
 
 	for i := range checkouts {
 		checkout := checkouts[i]
-		fmt.Printf("Checkout: #%d\n", checkout.GetCheckoutNumber())
+		fmt.Printf("Checkout: #%d\n", checkout.Number)
 		// Utilization based on the amount of customers the checkout processed in comparison to all the customers who were in the shop.
 		//figure := float64(checkout.GetTotalCustomersProcessed()) / float64(totalProcessedCustomers) * 100
 
@@ -119,7 +119,7 @@ func PrintCheckoutStats(checkouts []*packageService.Checkout, totalProcessedCust
 		figure := float64(checkout.GetProcessedProductsTime()) / float64(highest) * 100
 		totalUtilization += figure
 		fmt.Printf("Utilisation: %.2f%s\n", figure, "%")
-		productsProcessed := checkout.GetTotalProductsProcessed()
+		productsProcessed := checkout.ProcessedProducts
 		fmt.Printf("Products Processed: %d\n", productsProcessed)
 		percentProducts := float64(productsProcessed) / float64(totalProcessedProducts) * 100
 		fmt.Printf("Total Products Processed (%%): %.2f%s\n\n", percentProducts, "%")
@@ -129,7 +129,7 @@ func PrintCheckoutStats(checkouts []*packageService.Checkout, totalProcessedCust
 	fmt.Printf("Average Products Per Trolley: %.2f\n\n", float64(totalProcessedProducts)/float64(total))
 
 	avgWait, avgProcess := packageService.GetCustomerTimesInSeconds()
-	fmt.Printf("Average Customer Wait Time: %s, \nAvergae Customer Process Time: %s\n", avgWait, avgProcess)
+	fmt.Printf("Average Customer Wait Time: %s, \nAverage Customer Process Time: %s\n", avgWait, avgProcess)
 
 	fmt.Printf("Average Checkout Utilisation: %.2f%s\n", totalUtilization/float64(packageService.GetNumCheckouts()), "%")
 }
@@ -138,7 +138,7 @@ func getTotalProcessedProducts(c []*packageService.Checkout) int64 {
 	var total int64
 	total = 0
 	for i := range c {
-		total += c[i].GetTotalProductsProcessed()
+		total += c[i].ProcessedProducts
 	}
 	return total
 }
@@ -147,7 +147,7 @@ func getTotalProcessedCustomers(c []*packageService.Checkout) int64 {
 	var total int64
 	total = 0
 	for i := range c {
-		total += c[i].GetTotalCustomersProcessed()
+		total += c[i].ProcessedCustomers
 	}
 	return total
 }
