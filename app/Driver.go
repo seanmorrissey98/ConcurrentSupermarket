@@ -55,7 +55,7 @@ func main() {
 
 	// Get required inputs from the user
 	productsRate, _ := strconv.ParseInt(userInput("Please enter the range of products per trolley. (1-200):", 1, 200, true), 10, 64)
-	customerRate, _ := strconv.Atoi(userInput("Please enter the rate customers arrive at checkouts. (0-60):", 0, 60, true))
+	customerRate, _ := strconv.Atoi(userInput("Please enter the rate customers arrive at checkouts. (1-60):", 1, 60, true))
 	processSpeed, _ := strconv.ParseFloat(userInput("Please enter the range for product processing speed. (0.5-6):", 0.5, 6, false), 64)
 	// Print the inputs back to the user
 	fmt.Println("Products Rate:", productsRate)
