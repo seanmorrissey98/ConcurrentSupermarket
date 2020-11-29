@@ -249,6 +249,10 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		if s.checkoutOpen[0].isSeniorCheckout {
 			s.checkoutOpen[0].isSeniorCheckout = false
 		}
+
+		if s.checkoutOpen[0].tenOrLess {
+			s.checkoutOpen[0].tenOrLess = false
+		}
 	}
 
 	// Calculate threshold for opening a checkout

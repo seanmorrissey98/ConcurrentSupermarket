@@ -8,8 +8,8 @@ import (
 
 // Const variables for checkouts, customer per checkout and trolleys
 const (
-	NUM_CHECKOUTS              = 8
-	NUM_SMALL_CHECKOUTS        = 4
+	NUM_CHECKOUTS              = 6
+	NUM_SMALL_CHECKOUTS        = 2
 	MAX_CUSTOMERS_PER_CHECKOUT = 6
 	NUM_TROLLEYS               = 500
 )
