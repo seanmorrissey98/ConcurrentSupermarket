@@ -170,11 +170,11 @@ func (s *Supermarket) GenerateCheckouts() {
 		if i == 0 {
 			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, false, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
 		} else {
-			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, i >= NUM_CHECKOUTS, false,false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
+			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, i >= NUM_CHECKOUTS, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
 		}
 	}
 
-	s.checkoutClosed = append(s.checkoutClosed, NewCheckout(NUM_CHECKOUTS, true, true,false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
+	s.checkoutClosed = append(s.checkoutClosed, NewCheckout(NUM_CHECKOUTS+NUM_SMALL_CHECKOUTS, true, true, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
 }
 
 // Waits for a customer to finish shopping using a channel, then sends the customer to a checkout
