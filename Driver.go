@@ -94,7 +94,6 @@ func main() {
 	// Get the supermarket metrics for Statistics print
 	supermarket := m.getSupermarket()
 	checkouts := supermarket.getAllCheckouts()
-	totalProcessedCustomers := getTotalProcessedCustomers(checkouts)
 	totalProcessedProducts := getTotalProcessedProducts(checkouts)
 	fmt.Println()
 
@@ -104,11 +103,11 @@ func main() {
 	})
 
 	// Print the Checkout stats in order of checkout number
-	printCheckoutStats(checkouts, totalProcessedCustomers, totalProcessedProducts)
+	printCheckoutStats(checkouts, totalProcessedProducts)
 }
 
 // method to print all stats from each checkout after the supermarket closes
-func printCheckoutStats(checkouts []*Checkout, totalProcessedCustomers int64, totalProcessedProducts int64) {
+func printCheckoutStats(checkouts []*Checkout, totalProcessedProducts int64) {
 	var highest int64 = 0
 	var totalUtilization float64
 	for i := range checkouts {
@@ -140,9 +139,11 @@ func printCheckoutStats(checkouts []*Checkout, totalProcessedCustomers int64, to
 	fmt.Printf("Average Customer Wait Time: %s, \nAverage Customer Process Time: %s\n", avgWait, avgProcess)
 
 	fmt.Printf("Average Checkout Utilisation: %.2f%s\n", totalUtilization/float64(getNumCheckouts()), "%")
+	fmt.Printf("Customers Lost: %d\n", numCustomersLost)
+	fmt.Printf("Customers Banned: %d\n", numCustomersBanned)
 }
 
-// returns total products proccessed at checkout
+// Returns total products processed at checkout
 func getTotalProcessedProducts(c []*Checkout) int64 {
 	var total int64
 	total = 0
@@ -152,19 +153,9 @@ func getTotalProcessedProducts(c []*Checkout) int64 {
 	return total
 }
 
-// returns total proccessed customers at a checkout
-func getTotalProcessedCustomers(c []*Checkout) int64 {
-	var total int64
-	total = 0
-	for i := range c {
-		total += c[i].ProcessedCustomers
-	}
-	return total
-}
-
 // Checkout struct for processing customers,products
 // Stores channel of Customers in line
-// has channel of finishedProcessing for ids of customers finshed at checkout
+// Has a channel of finishedProcessing for ids of customers finished at checkout
 type Checkout struct {
 	Number                   int
 	tenOrLess                bool
@@ -221,13 +212,13 @@ func (c *Checkout) getProcessedProductsTime() int64 {
 	return c.processedProductsTime
 }
 
-// Gets the time it tokk the first customer to get to the checkout
+// Gets the time it took the first customer to get to the checkout
 func (c *Checkout) getFirstCustomerArrivalTime() int64 {
 	return c.firstCustomerArrivalTime
 }
 
 // Processes all products in a customers trolley
-// calculates customer processtime
+// Calculates customer process time
 // Increments the processed customer after customer is finished at checkout
 func (c *Checkout) processCheckout() {
 	for {
@@ -294,7 +285,7 @@ func (c *Checkout) close() {
 
 // Customer Struct storing trolley of products
 // Contains mutex
-// attributes such as gender and impatience affect shop and process speed
+// Attributes such as gender and impatience affect shop and process speed
 type Customer struct {
 	id          int
 	name        string
@@ -489,12 +480,10 @@ func (m *Manager) openSupermarket() {
 // Prints the current stats of the Supermarket using carriage return
 func (m *Manager) statPrint() {
 	for {
-		fmt.Printf("Total Customers Today: %03d, Total Customers In Store: %03d, Total Customers Shopping: %02d,"+
-			" Total Customers At Checkout: %02d, Checkouts Open: %d, Checkouts Closed: %d, Available Trolleys: %03d"+
-			", Customers Lost: %02d, Customers Banned: %d\r",
+		fmt.Printf("Customers Today: %03d, In Store: %03d, Shopping: %02d,"+
+			" At Checkout: %02d, Checkouts Open: %d\r",
 			totalNumberOfCustomersToday, totalNumberOfCustomersInStore, numberOfCurrentCustomersShopping,
-			numberOfCurrentCustomersAtCheckout, numberOfCheckoutsOpen, NumCheckouts+NumSmallCheckouts-numberOfCheckoutsOpen,
-			NumTrolleys-totalNumberOfCustomersInStore, numCustomersLost, numCustomersBanned)
+			numberOfCurrentCustomersAtCheckout, numberOfCheckoutsOpen)
 		time.Sleep(time.Millisecond * 40)
 
 		if !m.supermarket.openStatus && totalNumberOfCustomersInStore == 0 {
@@ -540,7 +529,7 @@ func newProduct() *Product {
 	return &p
 }
 
-// returns the products processing time
+// Returns the products processing time
 func (p *Product) getTime() float64 {
 	return p.time
 }
@@ -800,7 +789,6 @@ func (s *Supermarket) calculateOpenCheckout() {
 	if calculationOfThreshold > numOfOpenCheckouts {
 		// If there are no more checkouts to open
 		if len(s.checkoutClosed) == 0 {
-			//fmt.Printf("All checkouts currently open. The current number of customers is: %d\n", numOfCurrentCustomers)
 			return
 		}
 
@@ -832,13 +820,11 @@ func (s *Supermarket) calculateOpenCheckout() {
 
 		checkoutChangeStatusChan <- -1
 
-		//fmt.Printf("1 checkout just closed. We now have %d open checkouts.\n", len(s.checkoutOpen))
-
 		return
 	}
 }
 
-// returns a slice of all of the checkouts in the supermarket
+// Returns a slice of all of the checkouts in the supermarket
 func (s *Supermarket) getAllCheckouts() []*Checkout {
 	return append(s.checkoutOpen, s.checkoutClosed...)
 }
@@ -886,7 +872,7 @@ func (w *Weather) initializeWeather() {
 }
 
 // Returns a string of the current weather forecast i.e. "SUNNY DAYS"
-// and also returns a float64 value which is used as a multiplyer for
+// and also returns a float64 value which is used as a multiplier for
 // customers entering the shop
 func (w *Weather) getWeather() (string, float64) {
 	//return w.forecasts[w.status]
