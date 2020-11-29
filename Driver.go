@@ -587,7 +587,6 @@ func (s *Supermarket) generateCustomer() {
 
 		// Create a new customer with an id = the number they are created at in the supermarket
 		c := &Customer{id: s.customerCount, impatient: isImpatient, age: 20 + rand.Intn(50)}
-		//fmt.Printf("Total num of customers so far: %d\n", s.numOfTotalCustomers)
 
 		// Create 3 different trolley sizes modelling a basket, small trolley and large trolley
 		trolleySize := TrolleySizes[rand.Intn(len(TrolleySizes))]
@@ -604,7 +603,6 @@ func (s *Supermarket) generateCustomer() {
 				trolleyMutex.Unlock()
 				break
 			} else if i == len(s.trolleys)-1 {
-				//fmt.Println("No More Trolleys of Size: ", trolleySize)
 				outOfTrolleys = true
 			}
 		}
@@ -805,7 +803,6 @@ func (s *Supermarket) calculateOpenCheckout() {
 	// Calculate threshold for closing a checkout
 	if calculationOfThreshold < numOfOpenCheckouts {
 		if len(s.checkoutOpen) == 1 && s.openStatus {
-			//fmt.Printf("We only have one checkout open. Number of customer: %d\n", numOfCurrentCustomers)
 			return
 		}
 
