@@ -1,3 +1,7 @@
+// Thomas Kiely - 17185203
+// Art Maguire - 16150201
+// Sean Morrissey - 17222761
+// Paul Murphy - 17198046
 package main
 
 import (
@@ -123,6 +127,9 @@ func printCheckoutStats(checkouts []*Checkout, totalProcessedProducts int64) {
 		// Utilization based on time checkout was open compared to time shop was open.
 		figure := float64(checkout.getProcessedProductsTime()) / float64(highest) * 100
 		totalUtilization += figure
+		if checkout.hasScanner {
+			fmt.Printf("Has Scanner: %t\nSaved Time: %d seconds\n", checkout.hasScanner, int(checkout.processedProductsTime/1000))
+		}
 		fmt.Printf("Utilisation: %.2f%s\n", figure, "%")
 		productsProcessed := checkout.ProcessedProducts
 		fmt.Printf("Products Processed: %d\n", productsProcessed)
