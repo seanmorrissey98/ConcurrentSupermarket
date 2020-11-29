@@ -368,6 +368,7 @@ var (
 	customerWaitTimeTotal              int64
 )
 
+// Manager struct
 type Manager struct {
 	id          int
 	supermarket *Supermarket
@@ -376,6 +377,7 @@ type Manager struct {
 }
 
 // Manager Constructor
+// Returns new Manager
 func NewManager(id int, wg *sync.WaitGroup, pr int64, cr float64, ps float64) *Manager {
 	var weather Weather
 	weather.InitializeWeather()
@@ -430,6 +432,7 @@ func (m *Manager) CustomerStatusChangeListener() {
 	}
 }
 
+// Returns total number of Checkout objects in the Supermarket
 func GetNumCheckouts() int {
 	return NUM_CHECKOUTS + NUM_SMALL_CHECKOUTS
 }
@@ -446,6 +449,7 @@ func (m *Manager) OpenCloseCheckoutListener() {
 	}
 }
 
+// Returns the Manager Supermarket object
 func (m *Manager) GetSupermarket() *Supermarket {
 	return m.supermarket
 }
@@ -481,6 +485,7 @@ func (m *Manager) StatPrint() {
 	m.wg.Done()
 }
 
+// Returns the total number of Customers in the Supermarket today
 func GetTotalNumberOfCustomersToday() int {
 	return totalNumberOfCustomersToday
 }
@@ -521,6 +526,8 @@ var trolleyMutex *sync.Mutex
 var customerMutex *sync.RWMutex
 var checkoutMutex *sync.RWMutex
 
+
+// Supermarket struct
 type Supermarket struct {
 	customerCount    int
 	openStatus       bool
@@ -533,6 +540,7 @@ type Supermarket struct {
 }
 
 // Constructor for Supermarket
+// Returns new Supermarket
 func NewSupermarket() *Supermarket {
 	trolleyMutex = &sync.Mutex{}
 	customerMutex = &sync.RWMutex{}
