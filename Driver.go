@@ -119,8 +119,6 @@ func printCheckoutStats(checkouts []*Checkout, totalProcessedProducts int64) {
 	for i := range checkouts {
 		checkout := checkouts[i]
 		fmt.Printf("Checkout: #%d\n", checkout.Number)
-		// Utilization based on the amount of customers the checkout processed in comparison to all the customers who were in the shop.
-		//figure := float64(checkout.GetTotalCustomersProcessed()) / float64(totalProcessedCustomers) * 100
 
 		// Utilization based on time checkout was open compared to time shop was open.
 		figure := float64(checkout.getProcessedProductsTime()) / float64(highest) * 100
@@ -385,7 +383,6 @@ type Manager struct {
 	id          int
 	supermarket *Supermarket
 	wg          *sync.WaitGroup
-	//name string
 }
 
 // Manager Constructor
@@ -862,17 +859,16 @@ type Weather struct {
 // Initializes the forecast array of string to
 // include 4 different weather types.
 func (w *Weather) initializeWeather() {
-	w.forecasts[0] = "SUNNY DAYS" //1.25
+	w.forecasts[0] = "SUNNY DAYS" // 1.25
 	w.forecasts[1] = "RAINY DAYS" // .75
 	w.forecasts[2] = "CLEAR DAY"  // 1
-	w.forecasts[3] = "SNOWY DAY"  //.5
+	w.forecasts[3] = "SNOWY DAY"  // .5
 }
 
 // Returns a string of the current weather forecast i.e. "SUNNY DAYS"
 // and also returns a float64 value which is used as a multiplier for
 // customers entering the shop
 func (w *Weather) getWeather() (string, float64) {
-	//return w.forecasts[w.status]
 	multipliers := [4]float64{1.25, 0.75, 1, 0.5}
 	return w.forecasts[w.status], multipliers[w.status]
 }
