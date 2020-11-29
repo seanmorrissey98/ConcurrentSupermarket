@@ -13,7 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 )
-
+// validate user input, checks if value is within specified range
+// returns string of user input if correct input is supplied
 func userInput(inVal string, rangeLower float64, rangeHigher float64, ok bool) string {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println(inVal)
@@ -37,6 +38,10 @@ func userInput(inVal string, rangeLower float64, rangeHigher float64, ok bool) s
 	return input
 }
 
+// Starts the Programme,asking for user inputs fro product,customer speed etc
+// Starts a wait group which monitors supermarket for enter key
+// Create Manager object and opens supermarket
+// After supermarket closes we get metrics from supermarket simulation and print stats
 func main() {
 	// Trace for monitoring go routines
 	f, err := os.Create("trace.out")
@@ -101,6 +106,7 @@ func main() {
 	PrintCheckoutStats(checkouts, totalProcessedCustomers, totalProcessedProducts)
 }
 
+// method to print all stats from each checkout after the supermarket closes
 func PrintCheckoutStats(checkouts []*Checkout, totalProcessedCustomers int64, totalProcessedProducts int64) {
 	var highest int64 = 0
 	var totalUtilization float64
@@ -134,7 +140,7 @@ func PrintCheckoutStats(checkouts []*Checkout, totalProcessedCustomers int64, to
 
 	fmt.Printf("Average Checkout Utilisation: %.2f%s\n", totalUtilization/float64(GetNumCheckouts()), "%")
 }
-
+// returns total products proccessed at checkout
 func getTotalProcessedProducts(c []*Checkout) int64 {
 	var total int64
 	total = 0
@@ -143,7 +149,7 @@ func getTotalProcessedProducts(c []*Checkout) int64 {
 	}
 	return total
 }
-
+// returns total proccessed customers at a checkout
 func getTotalProcessedCustomers(c []*Checkout) int64 {
 	var total int64
 	total = 0
@@ -153,6 +159,9 @@ func getTotalProcessedCustomers(c []*Checkout) int64 {
 	return total
 }
 
+// Checkout struct for processing customers,products
+// Stores channel of Customers in line
+// has channel of finishedProcessing for ids of customers finshed at checkout
 type Checkout struct {
 	Number                   int
 	tenOrLess                bool
@@ -204,15 +213,18 @@ func (c *Checkout) AddPersonToLine(customer *Customer) {
 	c.lineLength++
 }
 
+// Gets time of products processed at checkout
 func (c *Checkout) GetProcessedProductsTime() int64 {
 	return c.processedProductsTime
 }
-
+// Gets the time it tokk the first customer to get to the checkout
 func (c *Checkout) GetFirstCustomerArrivalTime() int64 {
 	return c.firstCustomerArrivalTime
 }
 
 // Processes all products in a customers trolley
+// calculates customer processtime		
+// Increments the processed customer after customer is finished at checkout
 func (c *Checkout) ProcessCheckout() {
 	for {
 		if !c.isOpen && c.lineLength == 0 {
@@ -264,7 +276,7 @@ func (c *Checkout) ProcessCheckout() {
 		atomic.AddInt64(&c.ProcessedCustomers, 1)
 	}
 }
-
+// open Checkout
 func (c *Checkout) Open() {
 	c.isOpen = true
 	go c.ProcessCheckout()
@@ -274,7 +286,9 @@ func (c *Checkout) Open() {
 func (c *Checkout) Close() {
 	c.peopleInLine <- nil
 }
-
+// Customer Struct storing trolley of products
+// Contains mutex 
+// attributes such as gender and impatience affect shop and process speed 
 type Customer struct {
 	id          int
 	name        string
@@ -321,6 +335,7 @@ func (c *Customer) Shop(readyForCheckoutChan chan int) {
 	readyForCheckoutChan <- c.id
 }
 
+// Get num of products of a customer
 func (c *Customer) GetNumProducts() int {
 	return len(c.trolley.products)
 }
