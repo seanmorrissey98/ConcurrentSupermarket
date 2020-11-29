@@ -727,6 +727,7 @@ func (s *Supermarket) FinishedCheckoutListener() {
 	}
 }
 
+// Cleans up customer and trolley items when they leave a shop
 func (s *Supermarket) CustomerLeavesStore(id int) {
 	customerMutex.RLock()
 	trolley := s.customers[id].trolley
@@ -807,10 +808,12 @@ func (s *Supermarket) CalculateOpenCheckout() {
 	}
 }
 
+// returns a slice of all of the checkouts in the supermarket
 func (s *Supermarket) GetAllCheckouts() []*Checkout {
 	return append(s.checkoutOpen, s.checkoutClosed...)
 }
 
+// Trolley struct for holding products
 type Trolley struct {
 	capacity int
 	products []*Product
@@ -837,11 +840,14 @@ func (t *Trolley) EmptyTrolley() {
 	t.products = make([]*Product, 0, t.capacity)
 }
 
+// Weather struct which affects customer generation
 type Weather struct {
 	status    int
 	forecasts [4]string
 }
 
+// Initializes the forecast array of string to
+// include 4 different weather types.
 func (w *Weather) InitializeWeather() {
 	w.forecasts[0] = "SUNNY DAYS" //1.25
 	w.forecasts[1] = "RAINY DAYS" // .75
@@ -849,16 +855,22 @@ func (w *Weather) InitializeWeather() {
 	w.forecasts[3] = "SNOWY DAY"  //.5
 }
 
+// Returns a string of the current weather forecast i.e. "SUNNY DAYS"
+// and alos returns a float64 value which is used as a multiplyer for
+// customers entering the shop
 func (w *Weather) GetWeather() (string, float64) {
 	//return w.forecasts[w.status]
 	multipliers := [4]float64{1.25, 0.75, 1, 0.5}
 	return w.forecasts[w.status], multipliers[w.status]
 }
 
+// Sets the weathers status equal to forecastIndex
 func (w *Weather) ChangeWeather(forecastIndex int) {
 	w.status = forecastIndex
 }
 
+// Generates a random number between 0-3 and sets the weather
+// status to the random number.
 func (w *Weather) GenerateWeather() {
 	rand.Seed(time.Now().UnixNano())
 	weatherRand := rand.Intn(4)
