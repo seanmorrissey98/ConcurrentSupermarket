@@ -176,15 +176,19 @@ func (s *Supermarket) GenerateTrolleys() {
 
 // Generates 8 checkouts
 func (s *Supermarket) GenerateCheckouts() {
+	var hasScanner bool
 	// Default create 8 Checkouts when Supermarket is created
-	for i := 0; i < NUM_CHECKOUTS; i++ {
+	for i := 0; i < NUM_CHECKOUTS-1; i++ {
 		hasScanner := rand.Float64() < 0.5
 		if i == 0 {
-			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
+			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, false, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
 		} else {
-			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
+			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, false, false,false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
 		}
 	}
+	s.checkoutClosed = append(s.checkoutClosed, NewCheckout(NUM_CHECKOUTS, false, true,false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
+
+
 }
 
 // Waits for a customer to finish shopping using a channel, then sends the customer to a checkout
@@ -255,14 +259,12 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		return
 	}
 
-	//if len(s.checkoutOpen) == 1 {
-	//	if s.checkoutOpen[0].GetSeniorCheckout() {
-	//
-	//	}
-	//}
-	//
-	//
-	//
+	if len(s.checkoutOpen) == 1 {
+		if s.checkoutOpen[0].GetSeniorCheckout() {
+			s.checkoutOpen[0].SetSeniorCheckout(false)
+		}
+	}
+
 	// Calculate threshold for opening a checkout
 	if calculationOfThreshold > numOfOpenCheckouts {
 		// If there are no more checkouts to open

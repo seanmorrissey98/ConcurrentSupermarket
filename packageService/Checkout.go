@@ -9,6 +9,7 @@ import (
 type Checkout struct {
 	number                   int
 	tenOrLess                bool
+	isSeniorCheckout 		 bool
 	isSelfCheckout           bool
 	hasScanner               bool
 	inUse                    bool
@@ -26,8 +27,8 @@ type Checkout struct {
 }
 
 // Checkout Constructor
-func NewCheckout(number int, tenOrLess bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int64, processedCustomers int64, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
-	c := Checkout{number, tenOrLess, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing, 0, 0}
+func NewCheckout(number int, tenOrLess bool, isSeniorCheckout bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int64, processedCustomers int64, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
+	c := Checkout{number, tenOrLess, isSeniorCheckout, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing, 0, 0}
 
 	if c.hasScanner {
 		c.speed = 0.5
@@ -149,3 +150,10 @@ func (c *Checkout) GetId() int {
 	return c.number
 }
 
+func (c *Checkout) SetSeniorCheckout(isSenior bool) {
+	c.isSeniorCheckout = isSenior
+}
+
+func (c *Checkout) GetSeniorCheckout() bool  {
+	return c.isSeniorCheckout
+}
