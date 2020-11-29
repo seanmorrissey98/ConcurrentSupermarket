@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 )
+
 // validate user input, checks if value is within specified range
 // returns string of user input if correct input is supplied
 func userInput(inVal string, rangeLower float64, rangeHigher float64, ok bool) string {
@@ -73,8 +74,8 @@ func main() {
 	wg.Add(1)
 
 	// Create manager agent and start Open a Supermarket
-	m := NewManager(1, &wg, productsRate, float64(customerRate), processSpeed)
-	m.OpenSupermarket()
+	m := newManager(1, &wg, productsRate, float64(customerRate), processSpeed)
+	m.openSupermarket()
 
 	// Locks program running, must be at the end of main
 	fmt.Println("\nPress Enter at any time to terminate simulation...")
@@ -85,14 +86,14 @@ func main() {
 	fmt.Println("\nSupermarket CLosing...")
 
 	// Start graceful shutdown of the Supermarket
-	m.CloseSupermarket()
+	m.closeSupermarket()
 
 	// Wait for the Supermarket to close and the channels and go routines to shut down
 	wg.Wait()
 
 	// Get the supermarket metrics for Statistics print
-	supermarket := m.GetSupermarket()
-	checkouts := supermarket.GetAllCheckouts()
+	supermarket := m.getSupermarket()
+	checkouts := supermarket.getAllCheckouts()
 	totalProcessedCustomers := getTotalProcessedCustomers(checkouts)
 	totalProcessedProducts := getTotalProcessedProducts(checkouts)
 	fmt.Println()
@@ -103,16 +104,16 @@ func main() {
 	})
 
 	// Print the Checkout stats in order of checkout number
-	PrintCheckoutStats(checkouts, totalProcessedCustomers, totalProcessedProducts)
+	printCheckoutStats(checkouts, totalProcessedCustomers, totalProcessedProducts)
 }
 
 // method to print all stats from each checkout after the supermarket closes
-func PrintCheckoutStats(checkouts []*Checkout, totalProcessedCustomers int64, totalProcessedProducts int64) {
+func printCheckoutStats(checkouts []*Checkout, totalProcessedCustomers int64, totalProcessedProducts int64) {
 	var highest int64 = 0
 	var totalUtilization float64
 	for i := range checkouts {
-		if checkouts[i].GetFirstCustomerArrivalTime()+checkouts[i].GetProcessedProductsTime() > highest {
-			highest = checkouts[i].GetFirstCustomerArrivalTime() + checkouts[i].GetProcessedProductsTime()
+		if checkouts[i].getFirstCustomerArrivalTime()+checkouts[i].getProcessedProductsTime() > highest {
+			highest = checkouts[i].getFirstCustomerArrivalTime() + checkouts[i].getProcessedProductsTime()
 		}
 	}
 
@@ -123,7 +124,7 @@ func PrintCheckoutStats(checkouts []*Checkout, totalProcessedCustomers int64, to
 		//figure := float64(checkout.GetTotalCustomersProcessed()) / float64(totalProcessedCustomers) * 100
 
 		// Utilization based on time checkout was open compared to time shop was open.
-		figure := float64(checkout.GetProcessedProductsTime()) / float64(highest) * 100
+		figure := float64(checkout.getProcessedProductsTime()) / float64(highest) * 100
 		totalUtilization += figure
 		fmt.Printf("Utilisation: %.2f%s\n", figure, "%")
 		productsProcessed := checkout.ProcessedProducts
@@ -132,14 +133,15 @@ func PrintCheckoutStats(checkouts []*Checkout, totalProcessedCustomers int64, to
 		fmt.Printf("Total Products Processed (%%): %.2f%s\n\n", percentProducts, "%")
 	}
 
-	total := GetTotalNumberOfCustomersToday()
-	fmt.Printf("Average Products Per Trolley: %.2f\n\n", float64(totalProcessedProducts)/float64(total))
+	total := getTotalNumberOfCustomersToday()
+	fmt.Printf("Average Products Per Trolley: %d\n", int(float64(totalProcessedProducts)/float64(total)))
 
-	avgWait, avgProcess := GetCustomerTimesInSeconds()
+	avgWait, avgProcess := getCustomerTimesInSeconds()
 	fmt.Printf("Average Customer Wait Time: %s, \nAverage Customer Process Time: %s\n", avgWait, avgProcess)
 
-	fmt.Printf("Average Checkout Utilisation: %.2f%s\n", totalUtilization/float64(GetNumCheckouts()), "%")
+	fmt.Printf("Average Checkout Utilisation: %.2f%s\n", totalUtilization/float64(getNumCheckouts()), "%")
 }
+
 // returns total products proccessed at checkout
 func getTotalProcessedProducts(c []*Checkout) int64 {
 	var total int64
@@ -149,6 +151,7 @@ func getTotalProcessedProducts(c []*Checkout) int64 {
 	}
 	return total
 }
+
 // returns total proccessed customers at a checkout
 func getTotalProcessedCustomers(c []*Checkout) int64 {
 	var total int64
@@ -183,7 +186,7 @@ type Checkout struct {
 }
 
 // Checkout Constructor
-func NewCheckout(number int, tenOrLess bool, isSeniorCheckout bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int64, processedCustomers int64, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
+func newCheckout(number int, tenOrLess bool, isSeniorCheckout bool, isSelfCheckout bool, hasScanner bool, inUse bool, lineLength int, isLineFull bool, peopleInLine chan *Customer, averageWaitTime float32, processedProducts int64, processedCustomers int64, speed float64, isOpen bool, finishedProcessing chan int) *Checkout {
 	c := Checkout{number, tenOrLess, isSeniorCheckout, isSelfCheckout, hasScanner, inUse, lineLength, isLineFull, peopleInLine, averageWaitTime, processedProducts, processedCustomers, speed, isOpen, finishedProcessing, 0, 0}
 
 	if c.hasScanner {
@@ -194,19 +197,19 @@ func NewCheckout(number int, tenOrLess bool, isSeniorCheckout bool, isSelfChecko
 
 	// Starts a goroutine for processing all products in a trolley
 	if isOpen {
-		go c.ProcessCheckout()
+		go c.processCheckout()
 	}
 
 	return &c
 }
 
 // Gets the number of customers in a checkout line
-func (c *Checkout) GetNumPeopleInLine() int {
+func (c *Checkout) getNumPeopleInLine() int {
 	return len(c.peopleInLine)
 }
 
 // Adds a customer a specific checkout line
-func (c *Checkout) AddPersonToLine(customer *Customer) {
+func (c *Checkout) addPersonToLine(customer *Customer) {
 	// Use channel instead a list of customers to easily pop and send the customer
 	customer.waitTime = time.Now().UnixNano()
 	c.peopleInLine <- customer
@@ -214,18 +217,19 @@ func (c *Checkout) AddPersonToLine(customer *Customer) {
 }
 
 // Gets time of products processed at checkout
-func (c *Checkout) GetProcessedProductsTime() int64 {
+func (c *Checkout) getProcessedProductsTime() int64 {
 	return c.processedProductsTime
 }
+
 // Gets the time it tokk the first customer to get to the checkout
-func (c *Checkout) GetFirstCustomerArrivalTime() int64 {
+func (c *Checkout) getFirstCustomerArrivalTime() int64 {
 	return c.firstCustomerArrivalTime
 }
 
 // Processes all products in a customers trolley
-// calculates customer processtime		
+// calculates customer processtime
 // Increments the processed customer after customer is finished at checkout
-func (c *Checkout) ProcessCheckout() {
+func (c *Checkout) processCheckout() {
 	for {
 		if !c.isOpen && c.lineLength == 0 {
 			break
@@ -261,9 +265,9 @@ func (c *Checkout) ProcessCheckout() {
 
 		// Get all products in trolley and calculate the time to wait
 		for _, p := range products {
-			time.Sleep(time.Millisecond * time.Duration(p.GetTime()*500*c.speed*ageMultiplier))
+			time.Sleep(time.Millisecond * time.Duration(p.getTime()*500*c.speed*ageMultiplier))
 			atomic.AddInt64(&c.ProcessedProducts, 1)
-			atomic.AddInt64(&c.processedProductsTime, int64(p.GetTime()*500*c.speed))
+			atomic.AddInt64(&c.processedProductsTime, int64(p.getTime()*500*c.speed))
 		}
 
 		// Stop customer process timer
@@ -276,19 +280,21 @@ func (c *Checkout) ProcessCheckout() {
 		atomic.AddInt64(&c.ProcessedCustomers, 1)
 	}
 }
+
 // open Checkout
-func (c *Checkout) Open() {
+func (c *Checkout) open() {
 	c.isOpen = true
-	go c.ProcessCheckout()
+	go c.processCheckout()
 }
 
 // Passes a nil customer to the peopleInLine channel
-func (c *Checkout) Close() {
+func (c *Checkout) close() {
 	c.peopleInLine <- nil
 }
+
 // Customer Struct storing trolley of products
-// Contains mutex 
-// attributes such as gender and impatience affect shop and process speed 
+// Contains mutex
+// attributes such as gender and impatience affect shop and process speed
 type Customer struct {
 	id          int
 	name        string
@@ -303,14 +309,14 @@ type Customer struct {
 }
 
 // Shop lets the customer get products and add them to their trolley until the reach capacity of trolley or break the random < 0.05
-func (c *Customer) Shop(readyForCheckoutChan chan int) {
+func (c *Customer) shop(readyForCheckoutChan chan int) {
 
 	var speedMultiplier float64
 	speedMultiplier = 1
 
 	// Infinite loop of customer shopping
 	for {
-		if c.GetNumProducts() == int(productsRate) {
+		if c.getNumProducts() == int(productsRate) {
 			break
 		}
 
@@ -318,11 +324,11 @@ func (c *Customer) Shop(readyForCheckoutChan chan int) {
 			speedMultiplier = 1.5
 		}
 
-		p := NewProduct()
-		time.Sleep(time.Millisecond * time.Duration(p.GetTime()*200*speedMultiplier))
-		c.trolley.AddProductToTrolley(p)
-		c.shopTime += int64(p.GetTime() * 200)
-		if c.trolley.IsFull() {
+		p := newProduct()
+		time.Sleep(time.Millisecond * time.Duration(p.getTime()*200*speedMultiplier))
+		c.trolley.addProductToTrolley(p)
+		c.shopTime += int64(p.getTime() * 200)
+		if c.trolley.isFull() {
 			break
 		}
 
@@ -336,28 +342,28 @@ func (c *Customer) Shop(readyForCheckoutChan chan int) {
 }
 
 // Get num of products of a customer
-func (c *Customer) GetNumProducts() int {
+func (c *Customer) getNumProducts() int {
 	return len(c.trolley.products)
 }
 
 // Const variables for checkouts, customer per checkout and trolleys
 const (
-	NUM_CHECKOUTS              = 6
-	NUM_SMALL_CHECKOUTS        = 2
-	MAX_CUSTOMERS_PER_CHECKOUT = 6
-	NUM_TROLLEYS               = 500
+	NumCheckouts            = 6
+	NumSmallCheckouts       = 2
+	MaxCustomersPerCheckout = 6
+	NumTrolleys             = 500
 )
 
-// Global array for the 3 different trolley sizes, small, medium and large
-var TROLLEY_SIZES = [...]int{10, 100, 200}
+// TrolleySizes is a global array for the 3 different trolley sizes, small, medium and large
+var TrolleySizes = [...]int{10, 100, 200}
 
 // Enum for channel switch (iota = 0, 1, 2, 3, 4)
 const (
-	CUSTOMER_NEW = iota
-	CUSTOMER_CHECKOUT
-	CUSTOMER_FINISHED
-	CUSTOMER_LOST
-	CUSTOMER_BAN
+	CustomerNew = iota
+	CustomerCheckout
+	CustomerFinished
+	CustomerLost
+	CustomerBan
 )
 
 var (
@@ -393,11 +399,11 @@ type Manager struct {
 
 // Manager Constructor
 // Returns new Manager
-func NewManager(id int, wg *sync.WaitGroup, pr int64, cr float64, ps float64) *Manager {
+func newManager(id int, wg *sync.WaitGroup, pr int64, cr float64, ps float64) *Manager {
 	var weather Weather
-	weather.InitializeWeather()
-	weather.GenerateWeather()
-	forecast, multiplier := weather.GetWeather()
+	weather.initializeWeather()
+	weather.generateWeather()
+	forecast, multiplier := weather.getWeather()
 	fmt.Printf("\nCURRENT FORECAST: %s\n", forecast)
 
 	productsRate = pr
@@ -414,30 +420,30 @@ func NewManager(id int, wg *sync.WaitGroup, pr int64, cr float64, ps float64) *M
 }
 
 // Creates a switch for updating various customer stats
-func (m *Manager) CustomerStatusChangeListener() {
+func (m *Manager) customerStatusChangeListener() {
 	for {
 		input := <-customerStatusChan
 
 		switch input {
-		case CUSTOMER_NEW:
+		case CustomerNew:
 			numberOfCurrentCustomersShopping++
 			totalNumberOfCustomersInStore++
 			totalNumberOfCustomersToday++
 
-		case CUSTOMER_CHECKOUT:
+		case CustomerCheckout:
 			numberOfCurrentCustomersShopping--
 			numberOfCurrentCustomersAtCheckout++
 
-		case CUSTOMER_FINISHED:
+		case CustomerFinished:
 			numberOfCurrentCustomersAtCheckout--
 			totalNumberOfCustomersInStore--
 
-		case CUSTOMER_LOST:
+		case CustomerLost:
 			numCustomersLost++
 			numberOfCurrentCustomersShopping--
 			totalNumberOfCustomersInStore--
 
-		case CUSTOMER_BAN:
+		case CustomerBan:
 			numCustomersBanned++
 			numberOfCurrentCustomersShopping--
 			totalNumberOfCustomersInStore--
@@ -448,12 +454,12 @@ func (m *Manager) CustomerStatusChangeListener() {
 }
 
 // Returns total number of Checkout objects in the Supermarket
-func GetNumCheckouts() int {
-	return NUM_CHECKOUTS + NUM_SMALL_CHECKOUTS
+func getNumCheckouts() int {
+	return NumCheckouts + NumSmallCheckouts
 }
 
 // Listener for checkout open, close
-func (m *Manager) OpenCloseCheckoutListener() {
+func (m *Manager) openCloseCheckoutListener() {
 	for {
 		numberOfCheckoutsOpen += <-checkoutChangeStatusChan
 
@@ -465,30 +471,30 @@ func (m *Manager) OpenCloseCheckoutListener() {
 }
 
 // Returns the Manager Supermarket object
-func (m *Manager) GetSupermarket() *Supermarket {
+func (m *Manager) getSupermarket() *Supermarket {
 	return m.supermarket
 }
 
 // Opens the Supermarket and start go routines for channels and printing the updated stats
-func (m *Manager) OpenSupermarket() {
+func (m *Manager) openSupermarket() {
 	// Create a Supermarket
-	m.supermarket = NewSupermarket()
+	m.supermarket = newSupermarket()
 
-	go m.CustomerStatusChangeListener()
-	go m.OpenCloseCheckoutListener()
+	go m.customerStatusChangeListener()
+	go m.openCloseCheckoutListener()
 
-	go m.StatPrint()
+	go m.statPrint()
 }
 
 // Prints the current stats of the Supermarket using carriage return
-func (m *Manager) StatPrint() {
+func (m *Manager) statPrint() {
 	for {
 		fmt.Printf("Total Customers Today: %03d, Total Customers In Store: %03d, Total Customers Shopping: %02d,"+
 			" Total Customers At Checkout: %02d, Checkouts Open: %d, Checkouts Closed: %d, Available Trolleys: %03d"+
 			", Customers Lost: %02d, Customers Banned: %d\r",
 			totalNumberOfCustomersToday, totalNumberOfCustomersInStore, numberOfCurrentCustomersShopping,
-			numberOfCurrentCustomersAtCheckout, numberOfCheckoutsOpen, NUM_CHECKOUTS+NUM_SMALL_CHECKOUTS-numberOfCheckoutsOpen,
-			NUM_TROLLEYS-totalNumberOfCustomersInStore, numCustomersLost, numCustomersBanned)
+			numberOfCurrentCustomersAtCheckout, numberOfCheckoutsOpen, NumCheckouts+NumSmallCheckouts-numberOfCheckoutsOpen,
+			NumTrolleys-totalNumberOfCustomersInStore, numCustomersLost, numCustomersBanned)
 		time.Sleep(time.Millisecond * 40)
 
 		if !m.supermarket.openStatus && totalNumberOfCustomersInStore == 0 {
@@ -501,12 +507,12 @@ func (m *Manager) StatPrint() {
 }
 
 // Returns the total number of Customers in the Supermarket today
-func GetTotalNumberOfCustomersToday() int {
+func getTotalNumberOfCustomersToday() int {
 	return totalNumberOfCustomersToday
 }
 
 // Gets the average customer wait time and process time
-func GetCustomerTimesInSeconds() (string, string) {
+func getCustomerTimesInSeconds() (string, string) {
 	avgWait := float64(customerWaitTimeTotal) / float64(totalNumberOfCustomersToday-numCustomersLost)
 	avgProcess := float64(customerProcessTimeTotal) / float64(totalNumberOfCustomersToday-numCustomersLost)
 
@@ -519,28 +525,29 @@ func GetCustomerTimesInSeconds() (string, string) {
 }
 
 // Closes the supermarket
-func (m *Manager) CloseSupermarket() {
+func (m *Manager) closeSupermarket() {
 	m.supermarket.openStatus = false
 }
 
+// Product struct holds processing time for that product
 type Product struct {
 	time float64
 }
 
 // Product Constructor
-func NewProduct() *Product {
+func newProduct() *Product {
 	p := Product{rand.Float64() * processSpeed}
 	return &p
 }
 
-func (p *Product) GetTime() float64 {
+// returns the products processing time
+func (p *Product) getTime() float64 {
 	return p.time
 }
 
 var trolleyMutex *sync.Mutex
 var customerMutex *sync.RWMutex
 var checkoutMutex *sync.RWMutex
-
 
 // Supermarket struct
 type Supermarket struct {
@@ -556,24 +563,24 @@ type Supermarket struct {
 
 // Constructor for Supermarket
 // Returns new Supermarket
-func NewSupermarket() *Supermarket {
+func newSupermarket() *Supermarket {
 	trolleyMutex = &sync.Mutex{}
 	customerMutex = &sync.RWMutex{}
 	checkoutMutex = &sync.RWMutex{}
 
-	s := Supermarket{0, true, make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, NUM_TROLLEYS), make(chan int), make(chan int)}
-	s.GenerateTrolleys()
-	s.GenerateCheckouts()
+	s := Supermarket{0, true, make([]*Checkout, 0, 256), make([]*Checkout, 0, 256), make(map[int]*Customer), make([]*Trolley, NumTrolleys), make(chan int), make(chan int)}
+	s.generateTrolleys()
+	s.generateCheckouts()
 
-	go s.GenerateCustomer()
-	go s.FinishedShoppingListener()
-	go s.FinishedCheckoutListener()
+	go s.generateCustomer()
+	go s.finishedShoppingListener()
+	go s.finishedCheckoutListener()
 
 	return &s
 }
 
 // Create a customer and adds them to to the customers map in supermarket
-func (s *Supermarket) GenerateCustomer() {
+func (s *Supermarket) generateCustomer() {
 	for {
 		// Check is Supermarket is closing
 		if !s.openStatus {
@@ -594,7 +601,7 @@ func (s *Supermarket) GenerateCustomer() {
 		//fmt.Printf("Total num of customers so far: %d\n", s.numOfTotalCustomers)
 
 		// Create 3 different trolley sizes modelling a basket, small trolley and large trolley
-		trolleySize := TROLLEY_SIZES[rand.Intn(len(TROLLEY_SIZES))]
+		trolleySize := TrolleySizes[rand.Intn(len(TrolleySizes))]
 
 		// A customer picks a trolley based on the amount of products they need
 		outOfTrolleys := false
@@ -618,7 +625,7 @@ func (s *Supermarket) GenerateCustomer() {
 
 		s.customerCount++
 		// Add customer to stat print
-		customerStatusChan <- CUSTOMER_NEW
+		customerStatusChan <- CustomerNew
 
 		// Add customer to the customers map in supermarket, key=customer.id, value=customer
 		customerMutex.Lock()
@@ -626,44 +633,44 @@ func (s *Supermarket) GenerateCustomer() {
 		customerMutex.Unlock()
 
 		// Customer can now go add products to the trolley
-		go c.Shop(s.finishedShopping)
+		go c.shop(s.finishedShopping)
 
 		// Decides to open or close checkouts
-		s.CalculateOpenCheckout()
+		s.calculateOpenCheckout()
 	}
 }
 
 // Sends customer to a checkout
-func (s *Supermarket) SendToCheckout(id int) {
+func (s *Supermarket) sendToCheckout(id int) {
 	customerMutex.RLock()
 	c := s.customers[id]
 	customerMutex.RUnlock()
 
 	// Choose the best checkout for a customer to go to
-	checkout, pos := s.ChooseCheckout(c.GetNumProducts(), c.impatient)
+	checkout, pos := s.chooseCheckout(c.getNumProducts(), c.impatient)
 	// No checkout with < max number in queue - The number of lost customers (Customers will leave the store if they need to join a queue more than six deep)
 	if pos < 0 {
-		s.CustomerLeavesStore(id)
-		customerStatusChan <- CUSTOMER_LOST
+		s.customerLeavesStore(id)
+		customerStatusChan <- CustomerLost
 		return
 	}
 
 	// Checks if customer is impatient and joins a ten or less checkout with more tha 10 items
 	// Manager has a 50% chance of finding them and banning them
-	if c.impatient && c.GetNumProducts() > 10 && checkout.tenOrLess && rand.Float64() < 0.5 {
-		s.CustomerLeavesStore(id)
-		customerStatusChan <- CUSTOMER_BAN
+	if c.impatient && c.getNumProducts() > 10 && checkout.tenOrLess && rand.Float64() < 0.5 {
+		s.customerLeavesStore(id)
+		customerStatusChan <- CustomerBan
 		return
 	}
 
-	checkout.AddPersonToLine(c)
+	checkout.addPersonToLine(c)
 
 	// Change the status channel of customer, sends a 1
-	customerStatusChan <- CUSTOMER_CHECKOUT
+	customerStatusChan <- CustomerCheckout
 }
 
 // Gets the best open checkout for a customer to go to at the current time
-func (s *Supermarket) ChooseCheckout(numProducts int, isImpatient bool) (*Checkout, int) {
+func (s *Supermarket) chooseCheckout(numProducts int, isImpatient bool) (*Checkout, int) {
 	min, pos := -1, -1
 
 	checkoutMutex.RLock()
@@ -673,7 +680,7 @@ func (s *Supermarket) ChooseCheckout(numProducts int, isImpatient bool) (*Checko
 		// Ensure only customers with 10 or less items can go to the 10 or less checkouts
 		// Added impatience variable
 		// Finds the checkout with the least amount of people
-		if num, tenOrLess := s.checkoutOpen[i].GetNumPeopleInLine(), s.checkoutOpen[i].tenOrLess; ((tenOrLess && (numProducts <= 10 || isImpatient)) || !tenOrLess) && (num < min || min < 0) && num < MAX_CUSTOMERS_PER_CHECKOUT {
+		if num, tenOrLess := s.checkoutOpen[i].getNumPeopleInLine(), s.checkoutOpen[i].tenOrLess; ((tenOrLess && (numProducts <= 10 || isImpatient)) || !tenOrLess) && (num < min || min < 0) && num < MaxCustomersPerCheckout {
 			min, pos = num, i
 		}
 	}
@@ -688,30 +695,30 @@ func (s *Supermarket) ChooseCheckout(numProducts int, isImpatient bool) (*Checko
 }
 
 // Generates 200 trolleys in the supermarket
-func (s *Supermarket) GenerateTrolleys() {
-	for i := 0; i < NUM_TROLLEYS; i++ {
-		s.trolleys[i] = NewTrolley(TROLLEY_SIZES[rand.Intn(len(TROLLEY_SIZES))])
+func (s *Supermarket) generateTrolleys() {
+	for i := 0; i < NumTrolleys; i++ {
+		s.trolleys[i] = newTrolley(TrolleySizes[rand.Intn(len(TrolleySizes))])
 	}
 }
 
 // Generates 8 checkouts
-func (s *Supermarket) GenerateCheckouts() {
+func (s *Supermarket) generateCheckouts() {
 	var hasScanner bool
 	// Default create 8 Checkouts when Supermarket is created
-	for i := 0; i < NUM_CHECKOUTS+NUM_SMALL_CHECKOUTS-1; i++ {
+	for i := 0; i < NumCheckouts+NumSmallCheckouts-1; i++ {
 		hasScanner := rand.Float64() < 0.5
 		if i == 0 {
-			s.checkoutOpen = append(s.checkoutOpen, NewCheckout(i+1, false, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, true, s.finishedCheckout))
+			s.checkoutOpen = append(s.checkoutOpen, newCheckout(i+1, false, false, false, hasScanner, false, 0, false, make(chan *Customer, MaxCustomersPerCheckout), 0, 0, 0, 0, true, s.finishedCheckout))
 		} else {
-			s.checkoutClosed = append(s.checkoutClosed, NewCheckout(i+1, i >= NUM_CHECKOUTS, false, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
+			s.checkoutClosed = append(s.checkoutClosed, newCheckout(i+1, i >= NumCheckouts, false, false, hasScanner, false, 0, false, make(chan *Customer, MaxCustomersPerCheckout), 0, 0, 0, 0, false, s.finishedCheckout))
 		}
 	}
 
-	s.checkoutClosed = append(s.checkoutClosed, NewCheckout(NUM_CHECKOUTS+NUM_SMALL_CHECKOUTS, true, true, false, hasScanner, false, 0, false, make(chan *Customer, MAX_CUSTOMERS_PER_CHECKOUT), 0, 0, 0, 0, false, s.finishedCheckout))
+	s.checkoutClosed = append(s.checkoutClosed, newCheckout(NumCheckouts+NumSmallCheckouts, true, true, false, hasScanner, false, 0, false, make(chan *Customer, MaxCustomersPerCheckout), 0, 0, 0, 0, false, s.finishedCheckout))
 }
 
 // Waits for a customer to finish shopping using a channel, then sends the customer to a checkout
-func (s *Supermarket) FinishedShoppingListener() {
+func (s *Supermarket) finishedShoppingListener() {
 	for {
 		if !s.openStatus && numberOfCurrentCustomersShopping == 0 {
 			break
@@ -721,12 +728,12 @@ func (s *Supermarket) FinishedShoppingListener() {
 		id := <-s.finishedShopping
 
 		// Send customer to a checkout
-		s.SendToCheckout(id)
+		s.sendToCheckout(id)
 	}
 }
 
 // Waits for a customer to finish at a checkout using a channel, then removes the customer from the supermarket
-func (s *Supermarket) FinishedCheckoutListener() {
+func (s *Supermarket) finishedCheckoutListener() {
 	for {
 		if !s.openStatus && totalNumberOfCustomersInStore == 0 {
 			break
@@ -742,21 +749,21 @@ func (s *Supermarket) FinishedCheckoutListener() {
 		customerWaitTimeTotal += customer.waitTime
 
 		// Empty the customers trolley
-		s.CustomerLeavesStore(id)
+		s.customerLeavesStore(id)
 
-		customerStatusChan <- CUSTOMER_FINISHED
+		customerStatusChan <- CustomerFinished
 
-		s.CalculateOpenCheckout()
+		s.calculateOpenCheckout()
 	}
 }
 
 // Cleans up customer and trolley items when they leave a shop
-func (s *Supermarket) CustomerLeavesStore(id int) {
+func (s *Supermarket) customerLeavesStore(id int) {
 	customerMutex.RLock()
 	trolley := s.customers[id].trolley
 	customerMutex.RUnlock()
 
-	trolley.EmptyTrolley()
+	trolley.emptyTrolley()
 	// Adds the trolley the customer was using back into the trolleys slice in the supermarket
 	trolleyMutex.Lock()
 	s.trolleys = append(s.trolleys, trolley)
@@ -769,10 +776,10 @@ func (s *Supermarket) CustomerLeavesStore(id int) {
 }
 
 // Calculates the threshold for opening / closing a checkout
-func (s *Supermarket) CalculateOpenCheckout() {
+func (s *Supermarket) calculateOpenCheckout() {
 	numOfCurrentCustomers := len(s.customers)
 	numOfOpenCheckouts := len(s.checkoutOpen)
-	calculationOfThreshold := int(math.Ceil(float64(numOfCurrentCustomers) / MAX_CUSTOMERS_PER_CHECKOUT))
+	calculationOfThreshold := int(math.Ceil(float64(numOfCurrentCustomers) / MaxCustomersPerCheckout))
 
 	// Ensure at least 1 checkout stays open
 	if numOfCurrentCustomers == 0 && s.openStatus {
@@ -798,7 +805,7 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		}
 
 		// Open first checkout in closed checkout slice
-		s.checkoutClosed[0].Open()
+		s.checkoutClosed[0].open()
 		s.checkoutOpen = append(s.checkoutOpen, s.checkoutClosed[0])
 		s.checkoutClosed = s.checkoutClosed[1:]
 
@@ -815,11 +822,11 @@ func (s *Supermarket) CalculateOpenCheckout() {
 		}
 
 		// Choose best checkout to close
-		checkout, pos := s.ChooseCheckout(0, false)
+		checkout, pos := s.chooseCheckout(0, false)
 		if pos < 0 {
 			return
 		}
-		checkout.Close()
+		checkout.close()
 		s.checkoutClosed = append(s.checkoutClosed, checkout)
 		s.checkoutOpen = append(s.checkoutOpen[0:pos], s.checkoutOpen[pos+1:]...)
 
@@ -832,7 +839,7 @@ func (s *Supermarket) CalculateOpenCheckout() {
 }
 
 // returns a slice of all of the checkouts in the supermarket
-func (s *Supermarket) GetAllCheckouts() []*Checkout {
+func (s *Supermarket) getAllCheckouts() []*Checkout {
 	return append(s.checkoutOpen, s.checkoutClosed...)
 }
 
@@ -843,23 +850,23 @@ type Trolley struct {
 }
 
 // Trolley Constructor
-func NewTrolley(capacity int) *Trolley {
+func newTrolley(capacity int) *Trolley {
 	t := Trolley{capacity, make([]*Product, 0, capacity)}
 	return &t
 }
 
 // Adds a product to a trolley
-func (t *Trolley) AddProductToTrolley(product *Product) {
+func (t *Trolley) addProductToTrolley(product *Product) {
 	t.products = append(t.products, product)
 }
 
 // Checks if trolley has reached capacity
-func (t *Trolley) IsFull() bool {
+func (t *Trolley) isFull() bool {
 	return t.capacity == len(t.products)
 }
 
 // Empties trolley by declaring the current slice as a new slice
-func (t *Trolley) EmptyTrolley() {
+func (t *Trolley) emptyTrolley() {
 	t.products = make([]*Product, 0, t.capacity)
 }
 
@@ -871,7 +878,7 @@ type Weather struct {
 
 // Initializes the forecast array of string to
 // include 4 different weather types.
-func (w *Weather) InitializeWeather() {
+func (w *Weather) initializeWeather() {
 	w.forecasts[0] = "SUNNY DAYS" //1.25
 	w.forecasts[1] = "RAINY DAYS" // .75
 	w.forecasts[2] = "CLEAR DAY"  // 1
@@ -879,23 +886,23 @@ func (w *Weather) InitializeWeather() {
 }
 
 // Returns a string of the current weather forecast i.e. "SUNNY DAYS"
-// and alos returns a float64 value which is used as a multiplyer for
+// and also returns a float64 value which is used as a multiplyer for
 // customers entering the shop
-func (w *Weather) GetWeather() (string, float64) {
+func (w *Weather) getWeather() (string, float64) {
 	//return w.forecasts[w.status]
 	multipliers := [4]float64{1.25, 0.75, 1, 0.5}
 	return w.forecasts[w.status], multipliers[w.status]
 }
 
 // Sets the weathers status equal to forecastIndex
-func (w *Weather) ChangeWeather(forecastIndex int) {
+func (w *Weather) changeWeather(forecastIndex int) {
 	w.status = forecastIndex
 }
 
 // Generates a random number between 0-3 and sets the weather
 // status to the random number.
-func (w *Weather) GenerateWeather() {
+func (w *Weather) generateWeather() {
 	rand.Seed(time.Now().UnixNano())
 	weatherRand := rand.Intn(4)
-	w.ChangeWeather(weatherRand)
+	w.changeWeather(weatherRand)
 }
